@@ -6,10 +6,10 @@ c'est pour voir manu
 1. Contenu de l'équipe 7 :
 
 <ul>
-<li> - Edward Leroux </li>
-<li> - Michal Naumiak </li>
-<li> - François Gerbeau </li>
-<li> - Théo Lahmar </li>
+<li> Edward Leroux </li>
+<li> Michal Naumiak </li>
+<li> François Gerbeau </li>
+<li> Théo Lahmar </li>
 </ul>
 
 2. Choix du sujet : **Contrôle par la main d’un logiciel graphique**
@@ -22,7 +22,7 @@ Ce système permettrait de contrôler l’interface d’un logiciel graphique ty
 4. Une liste des équipements et logiciels requis avec leur disponibilité vérifiée:
 
 <ul>
-<li> - Un ordinateur portable avec une webcam (disponibilité assurée par l’un au moins des membres du groupe) </li>
-<li> - Le logiciel graphique open source choisi installé sur l’ordinateur muni de la webcam </li>
+<li> Un ordinateur portable avec une webcam (disponibilité assurée par l’un au moins des membres du groupe) </li>
+<li> Le logiciel graphique open source choisi installé sur l’ordinateur muni de la webcam </li>
 </ul>
 
