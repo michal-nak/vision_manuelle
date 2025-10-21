@@ -9,14 +9,14 @@ Pour le code:
 
 Pour la démo:
 
-- Contrôle de souris
+- Contrôle de souris (edward)
 - Détection de doigt genre expliciter l’événement « 1 doigt levé » , « 2 doigts levé », etc.
 - (Début de calibration)
 
 Pour le rapport:
 
-- Page titre avec le nom et le numéro du cours, la date de remise, le  nom du professeur, les noms et matricules des membres de l’équipe et le titre du projet (1 page) 
-- Mise en contexte et description de la solution proposée (max 1,5 pages) 
+- Page titre avec le nom et le numéro du cours, la date de remise, le  nom du professeur, les noms et matricules des membres de l’équipe et le titre du projet (1 page) (françois)
+- Mise en contexte et description de la solution proposée (max 1,5 pages) (françois)
 - Justification des choix de design préliminaires (max 1 page) 
 - Résultats préliminaires obtenus (max 0,5 page) (1 point)
 - Étapes à compléter dans la suite du projet (max 1 page) 
