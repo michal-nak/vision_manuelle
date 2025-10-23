@@ -64,7 +64,7 @@ while True:
     h, w = frame.shape[:2]
 
     # --- Preprocessing ---
-    blur = cv2.GaussianBlur(frame, (7,7), 0) # pour réduire le bruit et petites variations
+    blur = cv2.bilateralFilter(frame, d=5, sigmaColor=75, sigmaSpace=75) # pour réduire le bruit et petites variations
 
     # --- Skin color segmentation in HSV ---
     hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
