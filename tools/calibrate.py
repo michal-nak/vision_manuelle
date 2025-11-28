@@ -9,16 +9,21 @@ import time
 import json
 import os
 import re
+import sys
+from pathlib import Path
 from datetime import datetime
-from cv_detector import CVDetector
-from config import (
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.detectors import CVDetector
+from src.core.config import (
     CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FPS,
     CALIBRATION_DURATION, CALIBRATION_SAMPLE_INTERVAL,
     CALIBRATION_MIN_SAMPLES, CALIBRATION_RECT,
     CALIBRATION_FILE, CALIBRATION_BACKUP_FILE,
     YCRCB_LOWER, YCRCB_UPPER, HSV_LOWER, HSV_UPPER
 )
-from utils import find_camera, setup_camera, draw_text_with_background
+from src.core.utils import find_camera, setup_camera, draw_text_with_background
 
 def nothing(x):
     pass

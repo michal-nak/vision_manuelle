@@ -5,15 +5,14 @@ import cv2
 import numpy as np
 import threading
 import time
-from mediapipe_detector import MediaPipeDetector
-from cv_detector import CVDetector
-from config import (
+from ..detectors import MediaPipeDetector, CVDetector
+from ..core.config import (
     CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FPS,
     POSITION_SMOOTHING, PROCESSING_SCALE,
     UI_WINDOW_WIDTH, UI_WINDOW_HEIGHT,
     COLOR_PALETTE, GESTURE_NAMES
 )
-from utils import find_camera, setup_camera, FPSCounter, draw_text_with_background
+from ..core.utils import find_camera, setup_camera, FPSCounter, draw_text_with_background
 
 try:
     import ctypes

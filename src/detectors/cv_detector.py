@@ -7,8 +7,8 @@ import cv2
 import numpy as np
 import math
 from collections import deque
-from hand_detector_base import HandDetectorBase
-from config import (
+from .hand_detector_base import HandDetectorBase
+from ..core.config import (
     YCRCB_LOWER, YCRCB_UPPER, HSV_LOWER, HSV_UPPER,
     BG_HISTORY, BG_VAR_THRESHOLD, BG_DETECT_SHADOWS,
     POSITION_SMOOTHING, FINGER_COUNT_SMOOTHING,

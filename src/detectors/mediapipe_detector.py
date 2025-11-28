@@ -4,8 +4,8 @@ MediaPipe-based hand detection
 import cv2
 import mediapipe as mp
 import numpy as np
-from hand_detector_base import HandDetectorBase
-from config import MP_MODEL_COMPLEXITY, MP_MIN_DETECTION_CONFIDENCE, MP_MIN_TRACKING_CONFIDENCE
+from .hand_detector_base import HandDetectorBase
+from ..core.config import MP_MODEL_COMPLEXITY, MP_MIN_DETECTION_CONFIDENCE, MP_MIN_TRACKING_CONFIDENCE
 
 class MediaPipeDetector(HandDetectorBase):
     def __init__(self):

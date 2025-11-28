@@ -6,10 +6,14 @@ Press '1' for detector comparison, '2' for live test, '3' for edge detection
 import cv2
 import numpy as np
 import time
-from cv_detector import CVDetector
-from mediapipe_detector import MediaPipeDetector
-from config import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FPS, HSV_LOWER, HSV_UPPER
-from utils import find_camera, setup_camera, FPSCounter
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.detectors import CVDetector, MediaPipeDetector
+from src.core.config import CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FPS, HSV_LOWER, HSV_UPPER
+from src.core.utils import find_camera, setup_camera, FPSCounter
 
 def compare_detectors():
     print("\n" + "=" * 70)
