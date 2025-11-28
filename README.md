@@ -1,68 +1,162 @@
-# Détecteur de main (classique, sans apprentissage)
+# Gesture Paint - Hand-Controlled Drawing Application
 
-Ce dépôt contient un démonstrateur de détection de main construit avec des méthodes classiques de vision par ordinateur (pas de modèle d'apprentissage).
+A computer vision application that enables hands-free drawing and painting using hand gestures detected through your webcam. Control a full-featured paint application without touching your keyboard or mouse.
 
-Caractéristiques
-- Segmentation par couleur peau en espace YCrCb
-- Nettoyage par opérations morphologiques
-- Extraction du plus grand contour comme main
-- Calcul du convex hull et des convexity defects pour estimer les points des doigts
-- Support pour la caméra en direct (webcam)
+## 🎯 Features
 
-Prérequis
+- **Gesture-Based Controls**: Draw, erase, change colors, and adjust brush size using natural hand gestures
+- **Dual Detection Modes**: 
+  - MediaPipe (AI-based, high accuracy)
+  - Traditional CV (no neural networks, customizable)
+- **Auto-Calibration**: Quick 5-second setup for optimal hand detection
+- **Real-Time Performance**: Smooth drawing experience with position smoothing
+- **Full Paint Features**: Multiple colors, adjustable brush sizes, eraser, save/load images
+
+## 📋 Requirements
+
 - Python 3.10+
-- Installer les dépendances listées dans `requirements.txt` :
+- Webcam
+- Windows/Linux/macOS
+
+## 🚀 Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/michal-nak/vision_manuelle.git
+   cd vision_manuelle
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## ⚡ Quick Start
+
+### 1. Calibrate (First Time Setup)
+
+Run the calibration tool for optimal hand detection:
 
 ```bash
-pip install -r requirements.txt
+python calibrate.py
 ```
 
-Usage
+- Select option **1** (Auto-Calibrate)
+- Position your hand in the yellow box
+- Press **SPACE** to start
+- Move your hand slowly for 5 seconds
+- Save when complete
 
-Lancer la démo webcam :
+### 2. Launch the Application
 
 ```bash
-python3 hand_detection.py --camera 0
+python gesture_paint.py
 ```
 
-Touches utiles
-- `q` : quitter
-- `c` : capturer et sauvegarder l'image annotée (capture_<n>.png)
+The application window will open with:
+- **Left panel**: Live camera feed showing hand detection
+- **Right panel**: Drawing canvas
+- **Mode selector**: Switch between MediaPipe and CV detection
 
-Notes
-- Les paramètres de seuils pour la segmentation peau peuvent nécessiter un ajustement selon l'éclairage et le ton de peau.
-- Cette approche est simple et rapide, mais moins robuste que des méthodes basées sur des modèles (ex. MediaPipe Hand, réseaux CNN).
+### 3. Use Hand Gestures
 
-Si tu veux, je peux :
-- ajouter des paramètres CLI pour ajuster les seuils en temps réel
-- fournir une version supportant l'enregistrement vidéo
-- intégrer MediaPipe (si tu veux un détecteur beaucoup plus robuste)
-# vision_manuelle
-c'est pour voir manu
+| Gesture | Action |
+|---------|--------|
+| 👆 Thumb + Index | **Draw** (pen mode) |
+| 👆 Thumb + Middle | **Erase** |
+| 👆 Thumb + Ring | **Cycle colors** |
+| 👆 Thumb + Pinky | **Clear canvas** |
+| 👆 Index + Middle | **Increase brush size** |
+| 👆 Middle + Ring | **Decrease brush size** |
 
-## Proposition de Projet
+## 🛠️ Additional Tools
 
-### 1. Contenu de l'équipe 7 :
+### Calibration Tool
 
-<ul>
-<li> Edward Leroux </li>
-<li> Michal Naumiak </li>
-<li> François Gerbeau </li>
-<li> Théo Lahmar </li>
-</ul>
+Fine-tune hand detection for your lighting conditions:
 
-### 2. Choix du sujet :
-**Contrôle par la main d’un logiciel graphique**
+```bash
+python calibrate.py
+```
 
+**Options:**
+1. **Auto-Calibrate** - Quick 5-second automatic setup (recommended)
+2. **Manual Tuning** - Advanced trackbar controls for precise adjustment
+3. **Verify** - Check current calibration status
 
-### 3. Description du projet et de son lien avec la matière du cours:
+### Demo & Testing
 
-Ce système permettrait de contrôler l’interface d’un logiciel graphique type Paint au moyen de gestes de la main devant une caméra. Le geste définirait le choix d’un outil puis son utilisation. Le geste est observé au moyen d’une caméra de type webcam. Le projet implique une partie de détection/segmentation de la main, du suivi dans une séquence vidéo de celui-ci et de l’encodage des gestes en vue d’en faire la reconnaissance ainsi qu’une partie de traitement de l’image pour un rendu optimisé.
+Test different detection modes and features:
 
-### 4. Une liste des équipements et logiciels requis avec leur disponibilité vérifiée:
+```bash
+python demo.py
+```
 
-<ul>
-<li> Un ordinateur portable avec une webcam (disponibilité assurée par l’un au moins des membres du groupe) </li>
-<li> Le logiciel graphique open source choisi installé sur l’ordinateur muni de la webcam </li>
-</ul>
+**Options:**
+1. **Detector Comparison** - Side-by-side old vs new detection
+2. **Live Test** - Switch between MediaPipe and CV modes in real-time
+3. **Edge Detection** - Sobel edge detection demonstration
+
+## 📖 Detailed Documentation
+
+For comprehensive documentation including technical details, troubleshooting, and advanced features, see [SIMPLIFIED_README.md](SIMPLIFIED_README.md).
+
+## 🔧 Troubleshooting
+
+**Hand not detected?**
+- Run `python calibrate.py` and recalibrate
+- Ensure good lighting conditions
+- Try switching detection modes (MediaPipe ↔ CV)
+
+**Jittery cursor?**
+- Normal slight jitter is reduced by built-in smoothing
+- Ensure stable lighting
+- Keep hand steady during gestures
+
+**Low frame rate?**
+- Switch to CV mode (faster than MediaPipe)
+- Close other camera-using applications
+- Ensure your webcam supports 30 FPS
+
+## 💡 Tips for Best Results
+
+- Use in well-lit environments
+- Keep background simple and uncluttered
+- Position camera at eye level
+- Calibrate once per lighting setup
+- MediaPipe mode: Better gesture accuracy
+- CV mode: Better performance in varied lighting
+
+## 📂 Project Structure
+
+```
+├── gesture_paint.py      # Main application
+├── calibrate.py          # Calibration tool
+├── demo.py               # Testing & demos
+├── cv_detector.py        # Traditional CV detector
+├── mediapipe_detector.py # MediaPipe wrapper
+└── hand_detector_base.py # Base detector interface
+```
+
+## 🎨 Application Controls
+
+**Keyboard Shortcuts:**
+- Drawing tools accessible via toolbar
+- Save canvas via File menu
+- Color picker for custom colors
+
+**Mouse Controls:**
+- Use toolbar buttons as alternative to gestures
+- Click and drag for traditional mouse drawing
+
+## 📝 License
+
+See [LICENSE](LICENSE) for details.
+
+## 👥 Team
+
+- Edward Leroux
+- Michal Naumiak
+- François Gerbeau
+- Théo Lahmar
 
