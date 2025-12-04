@@ -209,104 +209,106 @@ class CVDetector(HandDetectorBase):
         return math.degrees(math.acos(cosang))
     
     def _count_fingers_enhanced(self, contour, debug_frame):
-        """Enhanced finger counting using multiple methods"""
-        # Method 1: Convexity defects (primary method)
-        hull_idx = cv2.convexHull(contour, returnPoints=False)
-        if len(hull_idx) <= 3:
-            return 0
-        
-        defects = cv2.convexityDefects(contour, hull_idx)
-        if defects is None:
-            return 0
-        
-        # Find the center of the hand for distance calculations
+        """Enhanced finger counting using convex hull peak detection"""
         M = cv2.moments(contour)
         if M["m00"] == 0:
             return 0
+        
         center_x = int(M["m10"] / M["m00"])
         center_y = int(M["m01"] / M["m00"])
-        center = (center_x, center_y)
         
-        # Calculate average distance from center to contour (hand radius)
-        distances = [math.hypot(pt[0][0] - center_x, pt[0][1] - center_y) for pt in contour]
-        avg_radius = np.mean(distances)
+        hull = cv2.convexHull(contour, returnPoints=True)
+        if len(hull) < 5:
+            return 0
         
-        # Detect finger tips and valleys
-        finger_tips = []
-        valleys = []
+        distances = []
+        hull_points = []
+        for i in range(len(hull)):
+            pt = tuple(hull[i][0])
+            dist = math.hypot(pt[0] - center_x, pt[1] - center_y)
+            distances.append(dist)
+            hull_points.append(pt)
         
-        for i in range(defects.shape[0]):
-            s, e, f, d = defects[i, 0]
-            start = tuple(contour[s][0])
-            end = tuple(contour[e][0])
-            far = tuple(contour[f][0])
-            
-            # Distance from center to defect point
-            dist_start = math.hypot(start[0] - center_x, start[1] - center_y)
-            dist_end = math.hypot(end[0] - center_x, end[1] - center_y)
-            dist_far = math.hypot(far[0] - center_x, far[1] - center_y)
-            
-            # Angle at valley
-            angle = self._angle_between(start, far, end)
-            
-            # Valid valley: angle < 90, far point close to center, depth significant
-            if angle < 90 and dist_far < avg_radius * 0.8 and d > 5000:
-                valleys.append(far)
+        if not distances:
+            return 0
+        
+        max_dist = max(distances)
+        avg_dist = np.mean(distances)
+        std_dist = np.std(distances)
+        
+        distance_threshold = avg_dist + (std_dist * 0.5)
+        
+        peaks = []
+        for i in range(len(distances)):
+            if distances[i] > distance_threshold:
+                prev_idx = (i - 1) % len(distances)
+                next_idx = (i + 1) % len(distances)
                 
-                # Finger tips are at start/end if they're far from center
-                if dist_start > avg_radius * 0.9:
-                    finger_tips.append(start)
-                if dist_end > avg_radius * 0.9:
-                    finger_tips.append(end)
+                if distances[i] >= distances[prev_idx] and distances[i] >= distances[next_idx]:
+                    peaks.append(i)
+        
+        candidate_fingers = []
+        for peak_idx in peaks:
+            pt = hull_points[peak_idx]
+            
+            if pt[1] < center_y + avg_dist * 0.3:
                 
-                # Draw valleys for debugging
-                cv2.circle(debug_frame, far, 5, (0, 0, 255), -1)
+                is_duplicate = False
+                for existing_pt, _ in candidate_fingers:
+                    if math.hypot(pt[0] - existing_pt[0], pt[1] - existing_pt[1]) < 20:
+                        is_duplicate = True
+                        break
+                
+                if not is_duplicate:
+                    candidate_fingers.append((pt, distances[peak_idx]))
         
-        # Method 2: Distance-based finger detection (backup)
-        hull_points = cv2.convexHull(contour, returnPoints=True)
-        extreme_points = []
+        candidate_fingers.sort(key=lambda x: x[0][0])
         
-        for pt in hull_points:
-            point = tuple(pt[0])
-            dist = math.hypot(point[0] - center_x, point[1] - center_y)
-            # Points far from center are potential finger tips
-            if dist > avg_radius * 0.95:
-                extreme_points.append(point)
+        final_fingers = []
+        min_finger_spacing = 15
         
-        # Combine and filter finger tips
-        all_tips = finger_tips + extreme_points
+        for i, (pt, dist) in enumerate(candidate_fingers):
+            if i == 0:
+                final_fingers.append(pt)
+            else:
+                last_pt = final_fingers[-1]
+                spacing = abs(pt[0] - last_pt[0])
+                
+                if spacing >= min_finger_spacing:
+                    final_fingers.append(pt)
+                elif dist > candidate_fingers[candidate_fingers.index((last_pt, distances[hull_points.index(last_pt)]))][1]:
+                    final_fingers[-1] = pt
         
-        # Remove duplicates (merge points within 30 pixels)
-        filtered_tips = []
-        for p in all_tips:
-            if not any(math.hypot(p[0] - q[0], p[1] - q[1]) < 30 for q in filtered_tips):
-                filtered_tips.append(p)
-        
-        # Draw finger tips
-        for tip in filtered_tips:
+        for tip in final_fingers:
             cv2.circle(debug_frame, tip, 8, (255, 0, 255), -1)
         
-        # Finger count logic based on tips and valleys
-        finger_count = len(filtered_tips)
+        cv2.circle(debug_frame, (center_x, center_y), 5, (0, 255, 255), -1)
         
-        # Heuristic corrections:
-        # - If we have good valleys, use valley count + 1
-        # - Otherwise use tip count with reasonable bounds
-        if len(valleys) > 0:
-            finger_count = min(len(valleys) + 1, 5)
-        else:
-            finger_count = min(max(finger_count, 0), 5)
+        finger_count = len(final_fingers)
         
-        # If very few tips/valleys detected, might be fist (0) or flat hand
-        if finger_count <= 1 and cv2.contourArea(contour) > 8000:
-            # Large area with few tips = likely flat hand (5 fingers)
-            perimeter = cv2.arcLength(contour, True)
-            if perimeter > 500:
-                finger_count = 5
-            else:
-                finger_count = 0  # Fist
+        hull_idx = cv2.convexHull(contour, returnPoints=False)
+        if len(hull_idx) > 3:
+            defects = cv2.convexityDefects(contour, hull_idx)
+            if defects is not None:
+                deep_valleys = 0
+                for i in range(defects.shape[0]):
+                    s, e, f, d = defects[i, 0]
+                    far = tuple(contour[f][0])
+                    
+                    if far[1] < center_y and d > 8000:
+                        angle = self._angle_between(
+                            tuple(contour[s][0]),
+                            far,
+                            tuple(contour[e][0])
+                        )
+                        if angle < 90:
+                            deep_valleys += 1
+                            cv2.circle(debug_frame, far, 5, (0, 0, 255), -1)
+                
+                if deep_valleys > 0 and finger_count > 0:
+                    finger_count = min(deep_valleys + 1, finger_count)
         
-        return finger_count
+        return max(0, min(finger_count, 5))
     
     def set_ycrcb_range(self, lower, upper):
         """Update YCrCb range for skin detection"""

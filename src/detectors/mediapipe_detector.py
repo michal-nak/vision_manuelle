@@ -49,14 +49,14 @@ class MediaPipeDetector(HandDetectorBase):
                 self.mp_drawing_styles.get_default_hand_connections_style()
             )
             
-            # Get index finger tip position (normalized 0-1)
-            index_tip = hand_landmarks.landmark[8]
-            output['hand_x'] = index_tip.x
-            output['hand_y'] = index_tip.y
+            # Get thumb tip position (normalized 0-1)
+            thumb_tip = hand_landmarks.landmark[4]
+            output['hand_x'] = thumb_tip.x
+            output['hand_y'] = thumb_tip.y
             
             # Draw cursor indicator
-            cx = int(index_tip.x * w)
-            cy = int(index_tip.y * h)
+            cx = int(thumb_tip.x * w)
+            cy = int(thumb_tip.y * h)
             cv2.circle(output['annotated_frame'], (cx, cy), 10, (0, 255, 0), -1)
             
             # Count extended fingers

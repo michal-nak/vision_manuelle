@@ -54,10 +54,10 @@ def auto_calibrate(cap, duration=CALIBRATION_DURATION):
         key = cv2.waitKey(1) & 0xFF
         
         if key == ord(' '):
-            print("\n▶️  CALIBRATION STARTED!")
+            print("\nCALIBRATION STARTED!")
             break
         elif key == 27:
-            print("\n⚠️  Cancelled")
+            print("\nCancelled")
             cv2.destroyAllWindows()
             return None
     
@@ -127,7 +127,8 @@ def manual_tune(cap, initial_calibration=None):
     
     cv2.namedWindow('Detection')
     cv2.namedWindow('Masks')
-    cv2.namedWindow('Controls')
+    cv2.namedWindow('Controls', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Controls', 400, 700)
     
     if initial_calibration:
         vals = initial_calibration
@@ -206,7 +207,7 @@ def manual_tune(cap, initial_calibration=None):
             break
         elif key == ord('r'):
             detector.reset_background()
-            print("\n✅ Background reset")
+            print("\nBackground reset")
         elif key == ord('c'):
             cv2.destroyAllWindows()
             new_cal = auto_calibrate(cap)
@@ -242,7 +243,7 @@ def auto_optimize(cap, base_calibration=None):
         print("\nFirst, let's calibrate color ranges...")
         base_calibration = auto_calibrate(cap)
         if not base_calibration:
-            print("❌ Calibration cancelled")
+            print("Calibration cancelled")
             return None
     
     best_config = {
@@ -353,7 +354,7 @@ def auto_optimize(cap, base_calibration=None):
         print(f"{idx+1}. {r['config']['name']:12} | FPS: {r['fps']:5.1f} | Detection: {r['detection_rate']:5.1f}% | Score: {r['quality_score']:5.1f} {marker}")
     
     print("\n" + "=" * 70)
-    print(f"🏆 WINNER: {best_config['name']}")
+    print(f"WINNER: {best_config['name']}")
     print(f"   FPS: {best_config['fps']:.1f} | Detection: {best_config['detection_rate']:.1f}%")
     print("=" * 70)
     print(f"   Denoise: {best_config['denoise_h']}")
@@ -411,7 +412,7 @@ def save_calibration(calibration):
     with open(detector_path, 'w', encoding='utf-8') as f:
         f.writelines(updated_lines)
     
-    print(f"✅ {detector_path.name} updated!")
+    print(f"{detector_path.name} updated!")
 
 def verify_calibration():
     print("\n" + "=" * 70)
@@ -655,7 +656,7 @@ def performance_tuning(cap):
                 'hsv_upper': np.array([params['h_max'], params['s_max'], params['v_max']])
             }
             
-            print(f"\n✅ Saving optimized settings:")
+            print(f"\nSaving optimized settings:")
             print(f"   FPS: {int(avg_fps)}")
             print(f"   Processing time: {total_time:.1f}ms")
             print(f"   Denoise strength: {params['denoise']}")
@@ -681,7 +682,7 @@ def main():
     print("\n1. Auto-Calibrate (5 seconds, recommended)")
     print("2. Manual Tuning (trackbars)")
     print("3. Performance Tuning (manual FPS optimization)")
-    print("4. AUTO-OPTIMIZE (automatic best settings) ⭐ NEW")
+    print("4. AUTO-OPTIMIZE (automatic best settings - NEW)")
     print("5. Verify Current Calibration")
     print("6. Exit")
     print("=" * 70)
