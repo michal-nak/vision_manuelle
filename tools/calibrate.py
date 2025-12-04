@@ -237,11 +237,13 @@ def save_calibration(calibration):
         'hsv_lower': calibration['hsv_lower'].tolist(),
         'hsv_upper': calibration['hsv_upper'].tolist()
     }
-    with open('calibration_backup.json', 'w') as f:
+    backup_path = Path(__file__).parent.parent / 'calibration_backup.json'
+    with open(backup_path, 'w') as f:
         json.dump(backup, f, indent=2)
-    print("\n💾 Backup saved to calibration_backup.json")
+    print(f"\n Backup saved to {backup_path}")
     
-    with open('cv_detector.py', 'r', encoding='utf-8') as f:
+    detector_path = Path(__file__).parent.parent / 'src' / 'detectors' / 'cv_detector.py'
+    with open(detector_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
     updated_lines = []
@@ -257,17 +259,18 @@ def save_calibration(calibration):
         else:
             updated_lines.append(line)
     
-    with open('cv_detector.py', 'w', encoding='utf-8') as f:
+    with open(detector_path, 'w', encoding='utf-8') as f:
         f.writelines(updated_lines)
     
-    print("✅ cv_detector.py updated!")
+    print(f"✅ {detector_path.name} updated!")
 
 def verify_calibration():
     print("\n" + "=" * 70)
     print("CALIBRATION STATUS")
     print("=" * 70)
     
-    with open('cv_detector.py', 'r') as f:
+    detector_path = Path(__file__).parent.parent / 'src' / 'detectors' / 'cv_detector.py'
+    with open(detector_path, 'r') as f:
         content = f.read()
     
     ycrcb_l = re.search(r'self\.ycrcb_lower = np\.array\(\[(\d+), (\d+), (\d+)\]', content)
@@ -289,16 +292,17 @@ def verify_calibration():
                      hsv_l_vals == [0, 30, 60] and hsv_u_vals == [20, 150, 255])
         
         if is_default:
-            print("\n⚠️  Using DEFAULT values (not calibrated)")
+            print("\n Using DEFAULT values (not calibrated)")
         else:
-            print("\n✅ Using CALIBRATED values")
+            print("\n Using CALIBRATED values")
     
-    if os.path.exists('calibration_backup.json'):
-        with open('calibration_backup.json', 'r') as f:
+    backup_path = Path(__file__).parent.parent / 'calibration_backup.json'
+    if backup_path.exists():
+        with open(backup_path, 'r') as f:
             backup = json.load(f)
         print(f"\nBackup found: {backup.get('timestamp', 'unknown')}")
     else:
-        print("\n⚠️  No backup file")
+        print("\n  No backup file")
     print("=" * 70)
 
 def main():
@@ -324,7 +328,7 @@ def main():
     if not cap.isOpened():
         cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("❌ Could not open camera")
+        print("Could not open camera")
         return
     
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -344,7 +348,7 @@ def main():
         save_choice = input("\nSave calibration? (y/n): ").strip().lower()
         if save_choice == 'y':
             save_calibration(calibration)
-            print("\n🎉 Calibration saved! Run gesture_paint.py to test.")
+            print("\nCalibration saved! Run gesture_paint.py to test.")
 
 if __name__ == "__main__":
     main()
