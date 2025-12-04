@@ -17,10 +17,10 @@ from ..core.config import (
 
 class CVDetector(HandDetectorBase):
     def __init__(self):
-        self.ycrcb_lower = np.array(YCRCB_LOWER, dtype=np.uint8)
-        self.ycrcb_upper = np.array(YCRCB_UPPER, dtype=np.uint8)
-        self.hsv_lower = np.array(HSV_LOWER, dtype=np.uint8)
-        self.hsv_upper = np.array(HSV_UPPER, dtype=np.uint8)
+        self.ycrcb_lower = np.array([128, 117, 28], dtype=np.uint8)
+        self.ycrcb_upper = np.array([199, 163, 131], dtype=np.uint8)
+        self.hsv_lower = np.array([3, 42, 135], dtype=np.uint8)
+        self.hsv_upper = np.array([35, 255, 255], dtype=np.uint8)
         
         self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(
             history=BG_HISTORY, 
@@ -39,36 +39,37 @@ class CVDetector(HandDetectorBase):
         self.frame_count += 1
         h, w = frame.shape[:2]
         
-        # Stage 1: Preprocessing with adaptive filtering
-        # Reduce noise while preserving edges
+        # Adaptive filtering for denoising
         denoised = cv2.fastNlMeansDenoisingColored(frame, None, 10, 10, 7, 21)
         
-        # Stage 2: Multi-channel skin detection
-        # YCrCb is more robust to lighting changes than HSV
+        # YCrCb skin detection
         ycrcb = cv2.cvtColor(denoised, cv2.COLOR_BGR2YCrCb)
         mask_ycrcb = cv2.inRange(ycrcb, self.ycrcb_lower, self.ycrcb_upper)
         
-        # HSV for additional validation
+        # HSV skin detection
         hsv = cv2.cvtColor(denoised, cv2.COLOR_BGR2HSV)
         mask_hsv = cv2.inRange(hsv, self.hsv_lower, self.hsv_upper)
         
-        # Combine masks (AND operation for higher confidence)
+        # YCrCb && HSV
         mask_combined = cv2.bitwise_and(mask_ycrcb, mask_hsv)
         
-        # Stage 3: Motion-based filtering (helps with static backgrounds)
+        # Motion-based filtering (bias for backgrounds preference)
         if self.frame_count > self.bg_learning_frames:
             fg_mask = self.bg_subtractor.apply(frame, learningRate=0.001)
+            
             # Dilate foreground mask to ensure hand is captured
             kernel_motion = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
             fg_mask = cv2.dilate(fg_mask, kernel_motion, iterations=2)
-            # Combine with skin mask
+            
+            # fg mask &&  skin mask
             mask_combined = cv2.bitwise_and(mask_combined, fg_mask)
+
         else:
             # Learn background in first frames
             self.bg_subtractor.apply(frame, learningRate=0.1)
         
-        # Stage 4: Advanced morphological operations
-        # Use larger kernels for better noise removal
+        # Morphological operations
+        # Use larger kernels
         kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         kernel_large = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
         
@@ -79,7 +80,7 @@ class CVDetector(HandDetectorBase):
         # Final smoothing
         mask_combined = cv2.GaussianBlur(mask_combined, (5, 5), 0)
         
-        # Stage 5: Intelligent contour selection
+        # Contour selection
         contours, _ = cv2.findContours(mask_combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         hand_contour = self._select_best_hand_contour(contours, h, w)
         
@@ -309,12 +310,12 @@ class CVDetector(HandDetectorBase):
     
     def set_ycrcb_range(self, lower, upper):
         """Update YCrCb range for skin detection"""
-        self.ycrcb_lower = np.array([126, 117, 28], dtype=np.uint8)
-        self.ycrcb_upper = np.array([203, 155, 129], dtype=np.uint8)
+        self.ycrcb_lower = np.array([128, 117, 28], dtype=np.uint8)
+        self.ycrcb_upper = np.array([199, 163, 131], dtype=np.uint8)
     
     def set_hsv_range(self, lower, upper):
         """Update HSV range for skin detection"""
-        self.hsv_lower = np.array([12, 25, 121], dtype=np.uint8)
+        self.hsv_lower = np.array([3, 42, 135], dtype=np.uint8)
         self.hsv_upper = np.array([35, 255, 255], dtype=np.uint8)
     
     def reset_background(self):

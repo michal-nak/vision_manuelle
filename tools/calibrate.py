@@ -12,6 +12,7 @@ import re
 import sys
 from pathlib import Path
 from datetime import datetime
+from collections import deque
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -38,7 +39,7 @@ def auto_calibrate(cap, duration=CALIBRATION_DURATION):
     rect_x, rect_y, rect_w, rect_h = CALIBRATION_RECT
     
     # Preview mode
-    print("\n⏸️  PREVIEW - Press SPACE to start, ESC to cancel")
+    print("\nPREVIEW - Press SPACE to start, ESC to cancel")
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -97,7 +98,7 @@ def auto_calibrate(cap, duration=CALIBRATION_DURATION):
         
         cv2.imshow('Calibration', frame)
         if cv2.waitKey(1) & 0xFF == 27:
-            print("\n⚠️  Cancelled")
+            print("\nCancelled")
             cv2.destroyAllWindows()
             return None
         frame_count += 1
@@ -105,7 +106,7 @@ def auto_calibrate(cap, duration=CALIBRATION_DURATION):
     cv2.destroyAllWindows()
     
     if len(ycrcb_samples) < 100:
-        print(f"\n⚠️  Not enough samples ({len(ycrcb_samples)})")
+        print(f"\nNot enough samples ({len(ycrcb_samples)})")
         return None
     
     ycrcb_samples, hsv_samples = np.array(ycrcb_samples), np.array(hsv_samples)
@@ -115,7 +116,7 @@ def auto_calibrate(cap, duration=CALIBRATION_DURATION):
     hsv_lower = np.maximum(np.percentile(hsv_samples, 5, axis=0).astype(np.uint8) - [5, 20, 30], [0, 0, 0]).astype(np.uint8)
     hsv_upper = np.minimum(np.percentile(hsv_samples, 95, axis=0).astype(np.uint8) + [5, 20, 30], [180, 255, 255]).astype(np.uint8)
     
-    print(f"\n✅ Calibration complete! ({len(ycrcb_samples)} samples)")
+    print(f"\nCalibration complete! ({len(ycrcb_samples)} samples)")
     print(f"   YCrCb: {ycrcb_lower.tolist()} to {ycrcb_upper.tolist()}")
     print(f"   HSV: {hsv_lower.tolist()} to {hsv_upper.tolist()}")
     
@@ -229,6 +230,141 @@ def manual_tune(cap, initial_calibration=None):
     cv2.destroyAllWindows()
     return None
 
+def auto_optimize(cap, base_calibration=None):
+    print("\n" + "=" * 70)
+    print("AUTO-OPTIMIZATION MODE")
+    print("=" * 70)
+    print("Testing parameter combinations to maximize FPS and detection quality...")
+    print("This will take ~2 minutes. Position your hand in frame.")
+    print("=" * 70)
+    
+    if base_calibration is None:
+        print("\nFirst, let's calibrate color ranges...")
+        base_calibration = auto_calibrate(cap)
+        if not base_calibration:
+            print("❌ Calibration cancelled")
+            return None
+    
+    best_config = {
+        'calibration': base_calibration,
+        'denoise_h': 10,
+        'kernel_small': 5,
+        'kernel_large': 11,
+        'morph_iter': 2,
+        'min_area': 3000,
+        'fps': 0,
+        'quality_score': 0
+    }
+    
+    # Parameter ranges to test
+    test_configs = [
+        # Fast (prioritize FPS)
+        {'denoise_h': 5, 'kernel_small': 3, 'kernel_large': 7, 'morph_iter': 1, 'min_area': 4000, 'name': 'Fast'},
+        # Balanced
+        {'denoise_h': 7, 'kernel_small': 5, 'kernel_large': 9, 'morph_iter': 2, 'min_area': 3000, 'name': 'Balanced'},
+        # Quality (prioritize detection)
+        {'denoise_h': 10, 'kernel_small': 5, 'kernel_large': 11, 'morph_iter': 2, 'min_area': 2500, 'name': 'Quality'},
+        # Ultra Fast
+        {'denoise_h': 3, 'kernel_small': 3, 'kernel_large': 7, 'morph_iter': 1, 'min_area': 5000, 'name': 'Ultra-Fast'},
+        # Custom variants
+        {'denoise_h': 7, 'kernel_small': 3, 'kernel_large': 9, 'morph_iter': 1, 'min_area': 3500, 'name': 'Fast+Quality'},
+        {'denoise_h': 5, 'kernel_small': 5, 'kernel_large': 9, 'morph_iter': 2, 'min_area': 3000, 'name': 'Smooth'},
+    ]
+    
+    results = []
+    
+    for idx, config in enumerate(test_configs):
+        print(f"\n[{idx+1}/{len(test_configs)}] Testing {config['name']} preset...")
+        
+        detector = CVDetector()
+        detector.ycrcb_lower = base_calibration['ycrcb_lower']
+        detector.ycrcb_upper = base_calibration['ycrcb_upper']
+        detector.hsv_lower = base_calibration['hsv_lower']
+        detector.hsv_upper = base_calibration['hsv_upper']
+        detector.denoise_h = config['denoise_h']
+        detector.kernel_small = np.ones((config['kernel_small'], config['kernel_small']), np.uint8)
+        detector.kernel_large = np.ones((config['kernel_large'], config['kernel_large']), np.uint8)
+        detector.morph_iterations = config['morph_iter']
+        detector.min_contour_area = config['min_area']
+        
+        # Test for 3 seconds
+        fps_samples = []
+        detection_count = 0
+        total_frames = 0
+        start_time = time.time()
+        
+        while time.time() - start_time < 3.0:
+            frame_start = time.time()
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            result = detector.process_frame(frame)
+            
+            if result['detected']:
+                detection_count += 1
+            total_frames += 1
+            
+            frame_time = time.time() - frame_start
+            if frame_time > 0:
+                fps_samples.append(1.0 / frame_time)
+            
+            cv2.imshow('Optimizing', result['annotated_frame'])
+            cv2.waitKey(1)
+        
+        avg_fps = np.mean(fps_samples) if fps_samples else 0
+        detection_rate = (detection_count / total_frames * 100) if total_frames > 0 else 0
+        
+        # Quality score: balance FPS and detection rate
+        quality_score = (avg_fps * 0.4) + (detection_rate * 0.6)
+        
+        result_entry = {
+            'config': config,
+            'fps': avg_fps,
+            'detection_rate': detection_rate,
+            'quality_score': quality_score
+        }
+        results.append(result_entry)
+        
+        print(f"  → FPS: {avg_fps:.1f} | Detection: {detection_rate:.1f}% | Score: {quality_score:.1f}")
+        
+        if quality_score > best_config['quality_score']:
+            best_config.update({
+                'denoise_h': config['denoise_h'],
+                'kernel_small': config['kernel_small'],
+                'kernel_large': config['kernel_large'],
+                'morph_iter': config['morph_iter'],
+                'min_area': config['min_area'],
+                'fps': avg_fps,
+                'quality_score': quality_score,
+                'detection_rate': detection_rate,
+                'name': config['name']
+            })
+    
+    cv2.destroyAllWindows()
+    
+    # Display results
+    print("\n" + "=" * 70)
+    print("OPTIMIZATION RESULTS")
+    print("=" * 70)
+    results.sort(key=lambda x: x['quality_score'], reverse=True)
+    for idx, r in enumerate(results):
+        marker = "★ BEST" if r['config']['name'] == best_config['name'] else ""
+        print(f"{idx+1}. {r['config']['name']:12} | FPS: {r['fps']:5.1f} | Detection: {r['detection_rate']:5.1f}% | Score: {r['quality_score']:5.1f} {marker}")
+    
+    print("\n" + "=" * 70)
+    print(f"🏆 WINNER: {best_config['name']}")
+    print(f"   FPS: {best_config['fps']:.1f} | Detection: {best_config['detection_rate']:.1f}%")
+    print("=" * 70)
+    print(f"   Denoise: {best_config['denoise_h']}")
+    print(f"   Kernel Small: {best_config['kernel_small']}x{best_config['kernel_small']}")
+    print(f"   Kernel Large: {best_config['kernel_large']}x{best_config['kernel_large']}")
+    print(f"   Morph Iterations: {best_config['morph_iter']}")
+    print(f"   Min Area: {best_config['min_area']}")
+    print("=" * 70)
+    
+    return best_config
+
 def save_calibration(calibration):
     backup = {
         'timestamp': datetime.now().isoformat(),
@@ -246,6 +382,9 @@ def save_calibration(calibration):
     with open(detector_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
+    # Check if this is an optimized config with processing parameters
+    has_processing_params = 'denoise_h' in calibration
+    
     updated_lines = []
     for line in lines:
         if 'self.ycrcb_lower = np.array' in line:
@@ -256,6 +395,16 @@ def save_calibration(calibration):
             updated_lines.append(f'        self.hsv_lower = np.array([{calibration["hsv_lower"][0]}, {calibration["hsv_lower"][1]}, {calibration["hsv_lower"][2]}], dtype=np.uint8)\n')
         elif 'self.hsv_upper = np.array' in line:
             updated_lines.append(f'        self.hsv_upper = np.array([{calibration["hsv_upper"][0]}, {calibration["hsv_upper"][1]}, {calibration["hsv_upper"][2]}], dtype=np.uint8)\n')
+        elif has_processing_params and 'self.denoise_h =' in line:
+            updated_lines.append(f'        self.denoise_h = {calibration["denoise_h"]}\n')
+        elif has_processing_params and 'self.kernel_small = np.ones' in line:
+            updated_lines.append(f'        self.kernel_small = np.ones(({calibration["kernel_small"]}, {calibration["kernel_small"]}), np.uint8)\n')
+        elif has_processing_params and 'self.kernel_large = np.ones' in line:
+            updated_lines.append(f'        self.kernel_large = np.ones(({calibration["kernel_large"]}, {calibration["kernel_large"]}), np.uint8)\n')
+        elif has_processing_params and 'self.morph_iterations =' in line:
+            updated_lines.append(f'        self.morph_iterations = {calibration["morph_iter"]}\n')
+        elif has_processing_params and 'self.min_contour_area =' in line:
+            updated_lines.append(f'        self.min_contour_area = {calibration["min_area"]}\n')
         else:
             updated_lines.append(line)
     
@@ -305,22 +454,244 @@ def verify_calibration():
         print("\n  No backup file")
     print("=" * 70)
 
+def performance_tuning(cap):
+    """Interactive performance tuning mode with all parameters"""
+    print("\n" + "=" * 70)
+    print("PERFORMANCE TUNING MODE")
+    print("=" * 70)
+    print("Adjust detection parameters in real-time")
+    print("=" * 70)
+    
+    detector = CVDetector()
+    
+    cv2.namedWindow('Detection', cv2.WINDOW_NORMAL)
+    cv2.namedWindow('Performance', cv2.WINDOW_NORMAL)
+    
+    # Color range trackbars
+    cv2.createTrackbar('Y_min', 'Performance', 99, 255, nothing)
+    cv2.createTrackbar('Y_max', 'Performance', 184, 255, nothing)
+    cv2.createTrackbar('Cr_min', 'Performance', 127, 255, nothing)
+    cv2.createTrackbar('Cr_max', 'Performance', 164, 255, nothing)
+    cv2.createTrackbar('Cb_min', 'Performance', 28, 255, nothing)
+    cv2.createTrackbar('Cb_max', 'Performance', 133, 255, nothing)
+    cv2.createTrackbar('H_min', 'Performance', 2, 180, nothing)
+    cv2.createTrackbar('H_max', 'Performance', 35, 180, nothing)
+    cv2.createTrackbar('S_min', 'Performance', 34, 255, nothing)
+    cv2.createTrackbar('S_max', 'Performance', 255, 255, nothing)
+    cv2.createTrackbar('V_min', 'Performance', 107, 255, nothing)
+    cv2.createTrackbar('V_max', 'Performance', 255, 255, nothing)
+    
+    # Processing parameter trackbars
+    cv2.createTrackbar('Denoise', 'Performance', 10, 30, nothing)
+    cv2.createTrackbar('Morph_small', 'Performance', 5, 15, nothing)
+    cv2.createTrackbar('Morph_large', 'Performance', 11, 25, nothing)
+    cv2.createTrackbar('Open_iter', 'Performance', 2, 5, nothing)
+    cv2.createTrackbar('Close_iter', 'Performance', 3, 7, nothing)
+    cv2.createTrackbar('Min_area', 'Performance', 30, 100, nothing)  # x100
+    cv2.createTrackbar('BG_threshold', 'Performance', 16, 50, nothing)
+    cv2.createTrackbar('Smooth_pos', 'Performance', 5, 10, nothing)
+    cv2.createTrackbar('Smooth_fing', 'Performance', 3, 7, nothing)
+    
+    print("\nControls:")
+    print("  Adjust trackbars to tune detection")
+    print("  's' = save current settings")
+    print("  'r' = reset background subtractor")
+    print("  'd' = toggle debug info")
+    print("  'q' = quit")
+    print("=" * 70)
+    
+    show_debug = False
+    fps_history = deque(maxlen=30)
+    prev_time = time.time()
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Get all parameter values
+        params = {
+            'y_min': cv2.getTrackbarPos('Y_min', 'Performance'),
+            'y_max': cv2.getTrackbarPos('Y_max', 'Performance'),
+            'cr_min': cv2.getTrackbarPos('Cr_min', 'Performance'),
+            'cr_max': cv2.getTrackbarPos('Cr_max', 'Performance'),
+            'cb_min': cv2.getTrackbarPos('Cb_min', 'Performance'),
+            'cb_max': cv2.getTrackbarPos('Cb_max', 'Performance'),
+            'h_min': cv2.getTrackbarPos('H_min', 'Performance'),
+            'h_max': cv2.getTrackbarPos('H_max', 'Performance'),
+            's_min': cv2.getTrackbarPos('S_min', 'Performance'),
+            's_max': cv2.getTrackbarPos('S_max', 'Performance'),
+            'v_min': cv2.getTrackbarPos('V_min', 'Performance'),
+            'v_max': cv2.getTrackbarPos('V_max', 'Performance'),
+            'denoise': max(1, cv2.getTrackbarPos('Denoise', 'Performance')),
+            'morph_small': max(3, cv2.getTrackbarPos('Morph_small', 'Performance')),
+            'morph_large': max(5, cv2.getTrackbarPos('Morph_large', 'Performance')),
+            'open_iter': max(1, cv2.getTrackbarPos('Open_iter', 'Performance')),
+            'close_iter': max(1, cv2.getTrackbarPos('Close_iter', 'Performance')),
+            'min_area': cv2.getTrackbarPos('Min_area', 'Performance') * 100,
+            'bg_threshold': max(1, cv2.getTrackbarPos('BG_threshold', 'Performance')),
+            'smooth_pos': max(1, cv2.getTrackbarPos('Smooth_pos', 'Performance')),
+            'smooth_fing': max(1, cv2.getTrackbarPos('Smooth_fing', 'Performance'))
+        }
+        
+        # Apply tuned denoising
+        t_start = time.perf_counter()
+        if params['denoise'] > 0:
+            denoised = cv2.fastNlMeansDenoisingColored(frame, None, params['denoise'], params['denoise'], 7, 21)
+        else:
+            denoised = frame.copy()
+        t_denoise = (time.perf_counter() - t_start) * 1000
+        
+        # Apply color detection
+        t_start = time.perf_counter()
+        ycrcb = cv2.cvtColor(denoised, cv2.COLOR_BGR2YCrCb)
+        mask_ycrcb = cv2.inRange(ycrcb, 
+                                  np.array([params['y_min'], params['cr_min'], params['cb_min']], dtype=np.uint8),
+                                  np.array([params['y_max'], params['cr_max'], params['cb_max']], dtype=np.uint8))
+        
+        hsv = cv2.cvtColor(denoised, cv2.COLOR_BGR2HSV)
+        mask_hsv = cv2.inRange(hsv,
+                               np.array([params['h_min'], params['s_min'], params['v_min']], dtype=np.uint8),
+                               np.array([params['h_max'], params['s_max'], params['v_max']], dtype=np.uint8))
+        
+        mask_combined = cv2.bitwise_and(mask_ycrcb, mask_hsv)
+        t_color = (time.perf_counter() - t_start) * 1000
+        
+        # Apply tuned morphology
+        t_start = time.perf_counter()
+        kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, 
+                                                  (params['morph_small'], params['morph_small']))
+        kernel_large = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
+                                                  (params['morph_large'], params['morph_large']))
+        
+        mask_combined = cv2.morphologyEx(mask_combined, cv2.MORPH_OPEN, kernel_small, 
+                                         iterations=params['open_iter'])
+        mask_combined = cv2.morphologyEx(mask_combined, cv2.MORPH_CLOSE, kernel_large,
+                                         iterations=params['close_iter'])
+        mask_combined = cv2.GaussianBlur(mask_combined, (5, 5), 0)
+        t_morph = (time.perf_counter() - t_start) * 1000
+        
+        # Find contours with tuned area threshold
+        t_start = time.perf_counter()
+        contours, _ = cv2.findContours(mask_combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        annotated = frame.copy()
+        hand_detected = False
+        
+        if contours:
+            # Filter by area
+            valid_contours = [c for c in contours if cv2.contourArea(c) > params['min_area']]
+            if valid_contours:
+                hand_contour = max(valid_contours, key=cv2.contourArea)
+                cv2.drawContours(annotated, [hand_contour], -1, (0, 255, 0), 2)
+                hull = cv2.convexHull(hand_contour)
+                cv2.drawContours(annotated, [hull], -1, (255, 0, 0), 2)
+                
+                M = cv2.moments(hand_contour)
+                if M["m00"] != 0:
+                    cx = int(M["m10"] / M["m00"])
+                    cy = int(M["m01"] / M["m00"])
+                    cv2.circle(annotated, (cx, cy), 10, (0, 255, 0), -1)
+                    hand_detected = True
+        
+        t_contour = (time.perf_counter() - t_start) * 1000
+        
+        # Calculate FPS
+        curr_time = time.time()
+        fps = 1.0 / (curr_time - prev_time) if curr_time - prev_time > 0 else 0
+        prev_time = curr_time
+        fps_history.append(fps)
+        avg_fps = np.mean(fps_history)
+        
+        # Display info
+        total_time = t_denoise + t_color + t_morph + t_contour
+        
+        cv2.putText(annotated, f"FPS: {int(avg_fps)}", (10, 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(annotated, f"Processing: {total_time:.1f}ms", (10, 60),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(annotated, "Detected" if hand_detected else "Not detected", (10, 90),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0) if hand_detected else (0, 0, 255), 2)
+        
+        if show_debug:
+            y_off = 120
+            cv2.putText(annotated, f"Denoise: {t_denoise:.1f}ms", (10, y_off), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(annotated, f"Color: {t_color:.1f}ms", (10, y_off + 20),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(annotated, f"Morph: {t_morph:.1f}ms", (10, y_off + 40),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(annotated, f"Contour: {t_contour:.1f}ms", (10, y_off + 60),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
+            # Show which operation is slowest
+            timings = [('Denoise', t_denoise), ('Color', t_color), ('Morph', t_morph), ('Contour', t_contour)]
+            slowest = max(timings, key=lambda x: x[1])
+            cv2.putText(annotated, f"Bottleneck: {slowest[0]}", (10, y_off + 90),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
+        
+        cv2.imshow('Detection', annotated)
+        
+        # Show mask comparison
+        masks = np.hstack([
+            cv2.cvtColor(mask_ycrcb, cv2.COLOR_GRAY2BGR),
+            cv2.cvtColor(mask_hsv, cv2.COLOR_GRAY2BGR),
+            cv2.cvtColor(mask_combined, cv2.COLOR_GRAY2BGR)
+        ])
+        cv2.putText(masks, "YCrCb", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.putText(masks, "HSV", (220, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.putText(masks, "Combined", (430, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.imshow('Performance', masks)
+        
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+        elif key == ord('s'):
+            # Save optimized settings
+            calibration = {
+                'ycrcb_lower': np.array([params['y_min'], params['cr_min'], params['cb_min']]),
+                'ycrcb_upper': np.array([params['y_max'], params['cr_max'], params['cb_max']]),
+                'hsv_lower': np.array([params['h_min'], params['s_min'], params['v_min']]),
+                'hsv_upper': np.array([params['h_max'], params['s_max'], params['v_max']])
+            }
+            
+            print(f"\n✅ Saving optimized settings:")
+            print(f"   FPS: {int(avg_fps)}")
+            print(f"   Processing time: {total_time:.1f}ms")
+            print(f"   Denoise strength: {params['denoise']}")
+            print(f"   Morphology kernels: {params['morph_small']}, {params['morph_large']}")
+            print(f"   Iterations: open={params['open_iter']}, close={params['close_iter']}")
+            print(f"   Min area: {params['min_area']}")
+            print(f"   Smoothing: pos={params['smooth_pos']}, fingers={params['smooth_fing']}")
+            
+            return calibration
+        elif key == ord('r'):
+            detector.reset_background()
+            print("Background reset")
+        elif key == ord('d'):
+            show_debug = not show_debug
+            print(f"Debug mode: {'ON' if show_debug else 'OFF'}")
+    
+    return None
+
 def main():
     print("=" * 70)
     print("UNIFIED CALIBRATION TOOL")
     print("=" * 70)
     print("\n1. Auto-Calibrate (5 seconds, recommended)")
     print("2. Manual Tuning (trackbars)")
-    print("3. Verify Current Calibration")
-    print("4. Exit")
+    print("3. Performance Tuning (manual FPS optimization)")
+    print("4. AUTO-OPTIMIZE (automatic best settings) ⭐ NEW")
+    print("5. Verify Current Calibration")
+    print("6. Exit")
     print("=" * 70)
     
-    choice = input("\nChoice (1-4): ").strip()
+    choice = input("\nChoice (1-6): ").strip()
     
-    if choice == '3':
+    if choice == '5':
         verify_calibration()
         return
-    elif choice == '4':
+    elif choice == '6':
         return
     
     # Open camera
@@ -340,6 +711,10 @@ def main():
         calibration = auto_calibrate(cap)
     elif choice == '2':
         calibration = manual_tune(cap)
+    elif choice == '3':
+        calibration = performance_tuning(cap)
+    elif choice == '4':
+        calibration = auto_optimize(cap)
     
     cap.release()
     cv2.destroyAllWindows()
