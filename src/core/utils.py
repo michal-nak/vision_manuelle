@@ -4,6 +4,7 @@ Utility functions for the hand detection system
 import cv2
 import numpy as np
 import time
+import platform
 from functools import wraps
 
 
@@ -17,8 +18,17 @@ def find_camera(max_attempts=5):
     Returns:
         cv2.VideoCapture object or None if no camera found
     """
+    os_name = platform.system()
+    
+    if os_name == 'Darwin':
+        backend = cv2.CAP_AVFOUNDATION
+    elif os_name == 'Windows':
+        backend = cv2.CAP_DSHOW
+    else:
+        backend = cv2.CAP_ANY
+    
     for camera_index in range(max_attempts):
-        test_cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+        test_cap = cv2.VideoCapture(camera_index, backend)
         if not test_cap.isOpened():
             test_cap.release()
             continue
