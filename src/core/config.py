@@ -1,6 +1,8 @@
 """
 Configuration constants for the hand detection system
 """
+import json
+from pathlib import Path
 
 # Camera settings
 CAMERA_WIDTH = 640
@@ -12,13 +14,32 @@ PROCESSING_SCALE = 2
 POSITION_SMOOTHING = 5
 FINGER_COUNT_SMOOTHING = 3
 
-# Color ranges (calibrated values)
-YCRCB_LOWER = [126, 117, 28]
-YCRCB_UPPER = [203, 155, 129]
-HSV_LOWER = [12, 25, 121]
-HSV_UPPER = [35, 255, 255]
+# Load color ranges from JSON config file
+def _load_color_ranges():
+    config_path = Path(__file__).parent.parent.parent / 'skin_detection_config.json'
+    if config_path.exists():
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            return (
+                config['ycrcb_lower'],
+                config['ycrcb_upper'],
+                config['hsv_lower'],
+                config['hsv_upper']
+            )
+        except Exception:
+            pass
+    # Fallback to hardcoded defaults if file doesn't exist or fails to load
+    return (
+        [126, 117, 28],
+        [203, 155, 129],
+        [12, 25, 121],
+        [35, 255, 255]
+    )
 
-# Default color ranges (fallback)
+YCRCB_LOWER, YCRCB_UPPER, HSV_LOWER, HSV_UPPER = _load_color_ranges()
+
+# Default color ranges (fallback for reset functionality)
 YCRCB_LOWER_DEFAULT = [0, 133, 77]
 YCRCB_UPPER_DEFAULT = [255, 173, 127]
 HSV_LOWER_DEFAULT = [0, 30, 60]
@@ -26,7 +47,7 @@ HSV_UPPER_DEFAULT = [20, 150, 255]
 
 # Detection settings
 MIN_HAND_AREA = 3000
-MAX_HAND_AREA = 0.6
+MAX_HAND_AREA = 16000
 
 # Background subtractor settings
 BG_HISTORY = 500
@@ -35,8 +56,9 @@ BG_DETECT_SHADOWS = False
 
 # MediaPipe settings
 MP_MODEL_COMPLEXITY = 0
-MP_MIN_DETECTION_CONFIDENCE = 0.5
-MP_MIN_TRACKING_CONFIDENCE = 0.5
+MP_MIN_DETECTION_CONFIDENCE = 0.3
+MP_MIN_TRACKING_CONFIDENCE = 0.3
+MP_STATIC_IMAGE_MODE = False
 
 # Calibration settings
 CALIBRATION_DURATION = 5

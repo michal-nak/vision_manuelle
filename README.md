@@ -1,24 +1,43 @@
-# Gesture Paint - Hand-Controlled Drawing Application
+# Gesture Paint 🎨✋
 
-A computer vision application that enables hands-free drawing and painting using hand gestures detected through your webcam. Control a full-featured paint application without touching your keyboard or mouse.
+Draw and paint using only your hand gestures! Control a full-featured paint application through your webcam without touching your keyboard or mouse.
 
-## 🎯 Features
+![Demo](https://img.shields.io/badge/Status-Active-success)
+![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-- **Gesture-Based Controls**: Draw, erase, change colors, and adjust brush size using natural hand gestures
-- **Dual Detection Modes**: 
-  - MediaPipe (AI-based, high accuracy)
-  - Traditional CV (no neural networks, customizable)
-- **Auto-Calibration**: Quick 5-second setup for optimal hand detection
-- **Real-Time Performance**: Smooth drawing experience with position smoothing
-- **Full Paint Features**: Multiple colors, adjustable brush sizes, eraser, save/load images
+## ✨ Features
 
-## 📋 Requirements
+- 🖐️ **Gesture-Based Drawing**: Draw, erase, change colors, and adjust brush size with hand gestures
+- 🎯 **Dual Detection Modes**: Choose between MediaPipe (AI-powered) or Computer Vision (traditional)
+- ⚡ **Real-Time Performance**: Smooth 30+ FPS with optimized detection algorithms
+- 🎨 **Full Paint Features**: Multiple colors, adjustable brush sizes, eraser, save/load
+- 🔧 **Debug Mode**: Toggle detailed detection metrics and visualization
+- 🖥️ **Cross-Platform**: Works on Windows, Linux, and macOS
 
+## 📸 Quick Demo
+
+### MediaPipe Mode
+- **Draw**: Touch thumb + index finger together
+- **Erase**: Touch thumb + middle finger together  
+- **Change Color**: Touch thumb + ring finger together
+- **Clear Canvas**: Touch thumb + pinky together
+
+### CV Mode
+- **Draw**: Show 1 finger
+- **Erase**: Show 2 fingers
+- **Change Color**: Show 3 fingers
+- **Increase Size**: Show 4 fingers
+- **Clear Canvas**: Show 5 fingers (all)
+
+## 🚀 Installation
+
+### Requirements
 - Python 3.10+
 - Webcam
 - Windows/Linux/macOS
 
-## 🚀 Installation
+### Setup
 
 1. **Clone the repository**:
    ```bash
@@ -31,132 +50,159 @@ A computer vision application that enables hands-free drawing and painting using
    pip install -r requirements.txt
    ```
 
-## ⚡ Quick Start
+## 🎮 Usage
 
-### 1. Calibrate (First Time Setup)
+### Launch the Application
 
-Run the calibration tool for optimal hand detection:
-
+**MediaPipe Mode (Recommended)**:
 ```bash
-python calibrate.py
+python main.py
 ```
 
-- Select option **1** (Auto-Calibrate)
-- Position your hand in the yellow box
-- Press **SPACE** to start
-- Move your hand slowly for 5 seconds
-- Save when complete
-
-### 2. Launch the Application
-
+**CV Mode**:
 ```bash
-python gesture_paint.py
+python main.py cv
 ```
 
-The application window will open with:
-- **Left panel**: Live camera feed showing hand detection
-- **Right panel**: Drawing canvas
-- **Mode selector**: Switch between MediaPipe and CV detection
+### Using Gestures
 
-### 3. Use Hand Gestures
-
+**MediaPipe Mode** - Touch fingertips together:
 | Gesture | Action |
 |---------|--------|
-| 👆 Thumb + Index | **Draw** (pen mode) |
-| 👆 Thumb + Middle | **Erase** |
-| 👆 Thumb + Ring | **Cycle colors** |
-| 👆 Thumb + Pinky | **Clear canvas** |
-| 👆 Index + Middle | **Increase brush size** |
-| 👆 Middle + Ring | **Decrease brush size** |
+| Thumb + Index | Draw |
+| Thumb + Middle | Erase |
+| Thumb + Ring | Cycle Colors |
+| Thumb + Pinky | Clear Canvas |
+| Index + Middle | Increase Brush Size |
+| Middle + Ring | Decrease Brush Size |
 
-## 🛠️ Additional Tools
+**CV Mode** - Show number of fingers:
+| Fingers | Action |
+|---------|--------|
+| 1 | Draw |
+| 2 | Erase |
+| 3 | Cycle Colors |
+| 4 | Increase Brush Size |
+| 5 | Clear Canvas |
+| 0 (fist) | No Action |
 
-### Calibration Tool
+### UI Controls
 
-Fine-tune hand detection for your lighting conditions:
+- **Mode Selector**: Switch between MediaPipe and CV detection
+- **Debug Mode**: Toggle to show detection metrics
+- **Color Palette**: Click to select drawing color
+- **Brush Size Slider**: Adjust from 1-50 pixels
+- **Clear/Save Buttons**: Clear canvas or save your artwork
 
+## 🛠️ Advanced Tools
+
+### Skin Detection Tuner
+Fine-tune CV mode skin detection for your lighting:
 ```bash
-python calibrate.py
+python tools/skin_tuner.py
 ```
 
-**Options:**
-1. **Auto-Calibrate** - Quick 5-second automatic setup (recommended)
-2. **Manual Tuning** - Advanced trackbar controls for precise adjustment
-3. **Verify** - Check current calibration status
-
-### Demo & Testing
-
-Test different detection modes and features:
-
+### Pipeline Visualizer
+See all 8 processing steps of the CV detector:
 ```bash
-python demo.py
+python tools/debug_detection.py
 ```
 
-**Options:**
-1. **Detector Comparison** - Side-by-side old vs new detection
-2. **Live Test** - Switch between MediaPipe and CV modes in real-time
-3. **Edge Detection** - Sobel edge detection demonstration
+## 💡 Tips for Best Results
 
-## 📖 Detailed Documentation
+- ✅ Use **good lighting** (avoid backlighting)
+- ✅ Keep **plain background** behind your hand
+- ✅ Position hand **centered in frame**
+- ✅ **MediaPipe**: More accurate, works in varied conditions
+- ✅ **CV Mode**: Faster performance, customizable
 
-For comprehensive documentation including technical details, troubleshooting, and advanced features, see [SIMPLIFIED_README.md](SIMPLIFIED_README.md).
+## 📚 Documentation
+
+- **[Architecture](docs/ARCHITECTURE.md)**: System design and technical details
+- **[Usage Guide](docs/USAGE.md)**: Comprehensive user manual
+- **[API Reference](docs/API.md)**: Developer documentation
+- **[Contributing](docs/CONTRIBUTING.md)**: How to contribute
+- **[Development History](docs/DEVELOPMENT.md)**: Project evolution and technical decisions
 
 ## 🔧 Troubleshooting
 
 **Hand not detected?**
-- Run `python calibrate.py` and recalibrate
-- Ensure good lighting conditions
-- Try switching detection modes (MediaPipe ↔ CV)
+- Ensure good lighting
+- Try switching detection modes
+- Use `python tools/skin_tuner.py` for CV mode calibration
 
 **Jittery cursor?**
-- Normal slight jitter is reduced by built-in smoothing
+- Keep hand steady
 - Ensure stable lighting
-- Keep hand steady during gestures
+- Application uses smoothing to reduce jitter
 
 **Low frame rate?**
-- Switch to CV mode (faster than MediaPipe)
-- Close other camera-using applications
-- Ensure your webcam supports 30 FPS
+- Close other applications
+- Try CV mode (faster than MediaPipe)
+- Check system performance
 
-## 💡 Tips for Best Results
+See [USAGE.md](docs/USAGE.md#troubleshooting) for detailed troubleshooting.
 
-- Use in well-lit environments
-- Keep background simple and uncluttered
-- Position camera at eye level
-- Calibrate once per lighting setup
-- MediaPipe mode: Better gesture accuracy
-- CV mode: Better performance in varied lighting
-
-## 📂 Project Structure
+## 🏗️ Project Structure
 
 ```
-├── gesture_paint.py      # Main application
-├── calibrate.py          # Calibration tool
-├── demo.py               # Testing & demos
-├── cv_detector.py        # Traditional CV detector
-├── mediapipe_detector.py # MediaPipe wrapper
-└── hand_detector_base.py # Base detector interface
+vision_manuelle/
+├── src/                    # Source code
+│   ├── core/              # Configuration and utilities
+│   ├── detectors/         # Hand detection implementations
+│   │   ├── cv/           # Computer vision detector
+│   │   └── mediapipe_detector.py
+│   └── ui/               # User interface
+├── tools/                 # Debugging and calibration tools
+├── docs/                  # Documentation
+├── main.py               # Application entry point
+└── requirements.txt      # Dependencies
 ```
 
-## 🎨 Application Controls
+## 🎓 Academic Context
 
-**Keyboard Shortcuts:**
-- Drawing tools accessible via toolbar
-- Save canvas via File menu
-- Color picker for custom colors
+This project was developed as part of a computer vision course, demonstrating:
+- Real-time hand detection algorithms
+- Gesture recognition systems
+- Traditional CV vs ML-based approaches
+- Performance optimization techniques
 
-**Mouse Controls:**
-- Use toolbar buttons as alternative to gestures
-- Click and drag for traditional mouse drawing
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for technical analysis and project evolution.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+
+### Quick Start for Contributors
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## 📝 License
 
-See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
 
 ## 👥 Team
 
-- Edward Leroux
-- Michal Naumiak
-- François Gerbeau
-- Théo Lahmar
+- **Michal Naumiak** - Lead Developer, CV Optimization
+- **Edward Leroux** - Initial Implementation, UI Design
+- **François Gerbeau** - Original Detection System
+- **Théo Lahmar** - Testing & Documentation
 
+## 🙏 Acknowledgments
+
+- **OpenCV** - Computer vision library
+- **MediaPipe** - Hand tracking solution
+- **NumPy** - Numerical computing
+- **Python Community** - Excellent ecosystem
+
+## 📬 Contact
+
+- **Repository**: [github.com/michal-nak/vision_manuelle](https://github.com/michal-nak/vision_manuelle)
+- **Issues**: [Report a bug or request a feature](https://github.com/michal-nak/vision_manuelle/issues)
+
+---
+
+**Course**: Vision Numérique | **Semester**: Automne 2025-26

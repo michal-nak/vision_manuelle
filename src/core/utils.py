@@ -10,7 +10,7 @@ from functools import wraps
 
 def find_camera(max_attempts=5):
     """
-    Find and open an available camera
+    Find and open an available camera with OS-specific optimizations
     
     Args:
         max_attempts: Maximum number of camera indices to try
@@ -21,22 +21,23 @@ def find_camera(max_attempts=5):
     os_name = platform.system()
     
     if os_name == 'Darwin':
-        backend = cv2.CAP_AVFOUNDATION
+        backends = [cv2.CAP_AVFOUNDATION]
     elif os_name == 'Windows':
-        backend = cv2.CAP_DSHOW
+        backends = [cv2.CAP_DSHOW, cv2.CAP_ANY]
     else:
-        backend = cv2.CAP_ANY
+        backends = [cv2.CAP_V4L2, cv2.CAP_ANY]
     
     for camera_index in range(max_attempts):
-        test_cap = cv2.VideoCapture(camera_index, backend)
-        if not test_cap.isOpened():
+        for backend in backends:
+            test_cap = cv2.VideoCapture(camera_index, backend)
+            if not test_cap.isOpened():
+                test_cap.release()
+                continue
+                
+            ret, frame = test_cap.read()
+            if ret:
+                return test_cap
             test_cap.release()
-            continue
-            
-        ret, frame = test_cap.read()
-        if ret:
-            return test_cap
-        test_cap.release()
     
     return None
 

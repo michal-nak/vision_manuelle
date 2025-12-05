@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-12-04T22:14:49",
+  "ycrcb_lower": [
+    146,
+    119,
+    117
+  ],
+  "ycrcb_upper": [
+    201,
+    139,
+    125
+  ],
+  "hsv_lower": [
+    10,
+    19,
+    151
+  ],
+  "hsv_upper": [
+    69,
+    39,
+    213
+  ],
+  "denoise_h": 12,
+  "kernel_small": 5,
+  "kernel_large": 9,
+  "morph_iterations": 3,
+  "min_area": 3000,
+  "statistics": {
+    "mp_detections": 173,
+    "cv_detections": 126,
+    "matches": 30,
+    "misses": 143,
+    "false_positives": 4,
+    "total_frames": 177
+  }
+}

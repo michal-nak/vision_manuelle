@@ -696,10 +696,8 @@ def main():
         return
     
     # Open camera
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    if not cap.isOpened():
-        cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
+    cap = find_camera()
+    if not cap:
         print("Could not open camera")
         return
     

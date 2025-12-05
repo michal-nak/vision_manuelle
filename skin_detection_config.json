@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-12-04T19:20:45.914329",
+  "ycrcb_lower": [
+    139,
+    125,
+    82
+  ],
+  "ycrcb_upper": [
+    250,
+    154,
+    149
+  ],
+  "hsv_lower": [
+    98,
+    0,
+    140
+  ],
+  "hsv_upper": [
+    60,
+    66,
+    255
+  ],
+  "description": "Skin detection color ranges for CV detector"
+}

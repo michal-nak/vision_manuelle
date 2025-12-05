@@ -4,28 +4,34 @@ Shows all processing steps to help diagnose why hand isn't being detected
 """
 import cv2
 import numpy as np
+import json
 import sys
 from pathlib import Path
+from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.detectors import CVDetector
+from src.core.utils import find_camera
 
 def main():
     print("=" * 70)
-    print("DETECTION DEBUG TOOL")
+    print("DETECTION DEBUG TOOL - ENHANCED")
     print("=" * 70)
     print("This shows each processing step to help diagnose detection issues")
     print("\nControls:")
     print("  'r' - Reset background subtractor")
     print("  'd' - Toggle denoising (to speed up)")
     print("  'b' - Toggle background subtraction")
+    print("  't' - Open trackbar window for live color adjustment")
+    print("  's' - Save current color ranges to config")
     print("  'q' - Quit")
     print("=" * 70)
     
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    if not cap.isOpened():
-        cap = cv2.VideoCapture(0)
+    cap = find_camera()
+    if not cap:
+        print("Could not open camera")
+        return
     
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -35,10 +41,67 @@ def main():
     # Debug settings
     use_denoising = True
     use_bg_subtraction = True
+    show_trackbars = False
+    
+    # Create trackbar window function
+    def create_trackbars():
+        cv2.namedWindow('Color Range Adjustment', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('Color Range Adjustment', 400, 600)
+        cv2.createTrackbar('YCrCb Y Min', 'Color Range Adjustment', detector.ycrcb_lower[0], 255, lambda x: None)
+        cv2.createTrackbar('YCrCb Y Max', 'Color Range Adjustment', detector.ycrcb_upper[0], 255, lambda x: None)
+        cv2.createTrackbar('YCrCb Cr Min', 'Color Range Adjustment', detector.ycrcb_lower[1], 255, lambda x: None)
+        cv2.createTrackbar('YCrCb Cr Max', 'Color Range Adjustment', detector.ycrcb_upper[1], 255, lambda x: None)
+        cv2.createTrackbar('YCrCb Cb Min', 'Color Range Adjustment', detector.ycrcb_lower[2], 255, lambda x: None)
+        cv2.createTrackbar('YCrCb Cb Max', 'Color Range Adjustment', detector.ycrcb_upper[2], 255, lambda x: None)
+        
+        cv2.createTrackbar('HSV H Min', 'Color Range Adjustment', detector.hsv_lower[0], 180, lambda x: None)
+        cv2.createTrackbar('HSV H Max', 'Color Range Adjustment', detector.hsv_upper[0], 180, lambda x: None)
+        cv2.createTrackbar('HSV S Min', 'Color Range Adjustment', detector.hsv_lower[1], 255, lambda x: None)
+        cv2.createTrackbar('HSV S Max', 'Color Range Adjustment', detector.hsv_upper[1], 255, lambda x: None)
+        cv2.createTrackbar('HSV V Min', 'Color Range Adjustment', detector.hsv_lower[2], 255, lambda x: None)
+        cv2.createTrackbar('HSV V Max', 'Color Range Adjustment', detector.hsv_upper[2], 255, lambda x: None)
+        return True
+    
+    def update_ranges_from_trackbars():
+        try:
+            detector.ycrcb_lower = np.array([
+                cv2.getTrackbarPos('YCrCb Y Min', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('YCrCb Cr Min', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('YCrCb Cb Min', 'Color Range Adjustment')
+            ], dtype=np.uint8)
+            
+            detector.ycrcb_upper = np.array([
+                cv2.getTrackbarPos('YCrCb Y Max', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('YCrCb Cr Max', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('YCrCb Cb Max', 'Color Range Adjustment')
+            ], dtype=np.uint8)
+            
+            detector.hsv_lower = np.array([
+                cv2.getTrackbarPos('HSV H Min', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('HSV S Min', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('HSV V Min', 'Color Range Adjustment')
+            ], dtype=np.uint8)
+            
+            detector.hsv_upper = np.array([
+                cv2.getTrackbarPos('HSV H Max', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('HSV S Max', 'Color Range Adjustment'),
+                cv2.getTrackbarPos('HSV V Max', 'Color Range Adjustment')
+            ], dtype=np.uint8)
+        except cv2.error:
+            return False
+        return True
+    
+    # Create main display window (resizable)
+    cv2.namedWindow('Detection Debug', cv2.WINDOW_NORMAL)
     
     while True:
         ret, frame = cap.read()
         if not ret:
+            break
+        
+        # Check if main window still exists
+        if cv2.getWindowProperty('Detection Debug', cv2.WND_PROP_VISIBLE) < 1:
+            print("\nWindow closed by user")
             break
         
         h, w = frame.shape[:2]
@@ -53,9 +116,18 @@ def main():
         ycrcb = cv2.cvtColor(denoised, cv2.COLOR_BGR2YCrCb)
         mask_ycrcb = cv2.inRange(ycrcb, detector.ycrcb_lower, detector.ycrcb_upper)
         
-        # Step 3: HSV skin detection
+        # Step 3: HSV skin detection with hue wrap-around handling
         hsv = cv2.cvtColor(denoised, cv2.COLOR_BGR2HSV)
-        mask_hsv = cv2.inRange(hsv, detector.hsv_lower, detector.hsv_upper)
+        
+        # Handle hue wrap-around (e.g., 170-180 and 0-10 for red/pink skin tones)
+        if detector.hsv_lower[0] > detector.hsv_upper[0]:
+            # Wrapped range: combine two masks
+            mask_hsv1 = cv2.inRange(hsv, detector.hsv_lower, np.array([180, detector.hsv_upper[1], detector.hsv_upper[2]], dtype=np.uint8))
+            mask_hsv2 = cv2.inRange(hsv, np.array([0, detector.hsv_lower[1], detector.hsv_lower[2]], dtype=np.uint8), detector.hsv_upper)
+            mask_hsv = cv2.bitwise_or(mask_hsv1, mask_hsv2)
+        else:
+            # Normal range
+            mask_hsv = cv2.inRange(hsv, detector.hsv_lower, detector.hsv_upper)
         
         # Step 4: Combine masks
         mask_combined = cv2.bitwise_and(mask_ycrcb, mask_hsv)
@@ -102,19 +174,64 @@ def main():
                     cv2.putText(result_frame, f"Area: {int(area)}", (cx-50, cy), 
                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
         
-        # Info overlay
+
+        
+        # Enhanced info overlay with all metrics
+        # Semi-transparent background
+        overlay = result_frame.copy()
+        cv2.rectangle(overlay, (5, 5), (635, 180), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.6, result_frame, 0.4, 0, result_frame)
+        
         info_y = 30
-        cv2.putText(result_frame, f"Valid Contours: {len(valid_contours)}", (10, info_y), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0) if len(valid_contours) > 0 else (0, 0, 255), 2)
+        
+        # Detection status
+        detected = len(valid_contours) > 0
+        status_text = "HAND DETECTED" if detected else "NO HAND DETECTED"
+        status_color = (0, 255, 0) if detected else (0, 0, 255)
+        cv2.putText(result_frame, status_text, (10, info_y), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, status_color, 2)
         info_y += 30
-        cv2.putText(result_frame, f"Denoise: {'ON' if use_denoising else 'OFF'} (d)", (10, info_y), 
+        
+        # Contour info
+        cv2.putText(result_frame, f"Valid Contours: {len(valid_contours)}", (10, info_y), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         info_y += 25
-        cv2.putText(result_frame, f"BG Sub: {'ON' if use_bg_subtraction else 'OFF'} (b)", (10, info_y), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        info_y += 25
-        cv2.putText(result_frame, f"Frame: {detector.frame_count}", (10, info_y), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        # If hand detected, show additional metrics
+        if valid_contours:
+            largest = max(valid_contours, key=cv2.contourArea)
+            area = cv2.contourArea(largest)
+            cv2.putText(result_frame, f"Largest Area: {int(area)} px", (10, info_y), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+            info_y += 25
+            
+            # Confidence based on area
+            confidence = min(100, int((area / 10000) * 100))
+            cv2.putText(result_frame, f"Confidence: {confidence}%", (10, info_y), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+            info_y += 25
+        
+        # Processing settings
+        cv2.putText(result_frame, f"Denoise: {'ON' if use_denoising else 'OFF'} (d) | BG Sub: {'ON' if use_bg_subtraction else 'OFF'} (b)", 
+                   (10, info_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+        info_y += 20
+        
+        cv2.putText(result_frame, f"Frame: {detector.frame_count} | Trackbars: {'OPEN' if show_trackbars else 'CLOSED'} (t)", 
+                   (10, info_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+        info_y += 20
+        
+        # Gesture mapping legend
+        legend_y = info_y + 10
+        cv2.putText(result_frame, "Controls: 't'=trackbars | 's'=save | 'd'=denoise | 'b'=bg-sub | 'r'=reset | 'q'=quit", 
+                   (10, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 255, 255), 1)
+        
+        # Show current color ranges
+        info_y += 35
+        cv2.putText(result_frame, f"YCrCb: [{detector.ycrcb_lower[0]},{detector.ycrcb_lower[1]},{detector.ycrcb_lower[2]}] to [{detector.ycrcb_upper[0]},{detector.ycrcb_upper[1]},{detector.ycrcb_upper[2]}]", 
+                   (10, info_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 200, 200), 1)
+        info_y += 15
+        cv2.putText(result_frame, f"HSV: [{detector.hsv_lower[0]},{detector.hsv_lower[1]},{detector.hsv_lower[2]}] to [{detector.hsv_upper[0]},{detector.hsv_upper[1]},{detector.hsv_upper[2]}]", 
+                   (10, info_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 255, 200), 1)
         
         # Create visualization grid
         mask_ycrcb_vis = cv2.cvtColor(mask_ycrcb, cv2.COLOR_GRAY2BGR)
@@ -154,7 +271,13 @@ def main():
         scale = 0.5
         grid = cv2.resize(grid, None, fx=scale, fy=scale)
         
-        cv2.imshow('Detection Pipeline Debug', grid)
+        cv2.imshow('Detection Debug', grid)
+        
+        # Update trackbars if open
+        if show_trackbars:
+            if not update_ranges_from_trackbars():
+                print("\nTrackbar window closed")
+                show_trackbars = False
         
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
@@ -171,6 +294,37 @@ def main():
         elif key == ord('b'):
             use_bg_subtraction = not use_bg_subtraction
             print(f"✅ Background subtraction: {'ON' if use_bg_subtraction else 'OFF'}")
+        elif key == ord('t'):
+            if not show_trackbars:
+                show_trackbars = create_trackbars()
+                print("✅ Trackbar window opened - adjust sliders to tune detection")
+            else:
+                cv2.destroyWindow('Color Range Adjustment')
+                show_trackbars = False
+                print("✅ Trackbar window closed")
+        elif key == ord('s'):
+            # Save to JSON config file
+            config_path = Path(__file__).parent.parent / 'skin_detection_config.json'
+            config = {
+                "timestamp": datetime.now().isoformat(),
+                "ycrcb_lower": detector.ycrcb_lower.tolist(),
+                "ycrcb_upper": detector.ycrcb_upper.tolist(),
+                "hsv_lower": detector.hsv_lower.tolist(),
+                "hsv_upper": detector.hsv_upper.tolist(),
+                "description": "Skin detection color ranges for CV detector"
+            }
+            with open(config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+            
+            print("\n" + "=" * 70)
+            print("✅ SAVED TO CONFIG FILE")
+            print("=" * 70)
+            print(f"Configuration saved to {config_path}")
+            print(f"YCrCb Lower: {detector.ycrcb_lower.tolist()}")
+            print(f"YCrCb Upper: {detector.ycrcb_upper.tolist()}")
+            print(f"HSV Lower: {detector.hsv_lower.tolist()}")
+            print(f"HSV Upper: {detector.hsv_upper.tolist()}")
+            print("=" * 70)
     
     cap.release()
     cv2.destroyAllWindows()

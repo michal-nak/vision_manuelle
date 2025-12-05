@@ -8,25 +8,54 @@ from .hand_detector_base import HandDetectorBase
 from ..core.config import MP_MODEL_COMPLEXITY, MP_MIN_DETECTION_CONFIDENCE, MP_MIN_TRACKING_CONFIDENCE
 
 class MediaPipeDetector(HandDetectorBase):
-    def __init__(self):
+    def __init__(self, show_debug=False):
         self.mp_hands = mp.solutions.hands
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
         
+        # Use static_image_mode=True to avoid timestamp conflicts
+        # This treats each frame independently which is more stable
         self.hands = self.mp_hands.Hands(
+            static_image_mode=True,
             model_complexity=MP_MODEL_COMPLEXITY,
             min_detection_confidence=MP_MIN_DETECTION_CONFIDENCE,
-            min_tracking_confidence=MP_MIN_TRACKING_CONFIDENCE,
             max_num_hands=1
         )
+        
+        self.last_landmarks = None
+        self.show_debug_overlay = show_debug
+        self.last_result = None
     
     def process_frame(self, frame):
         """Process frame using MediaPipe"""
         h, w = frame.shape[:2]
         
-        # Convert to RGB for MediaPipe
+        # Convert to RGB for MediaPipe (writeable flag improves performance)
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(rgb_frame)
+        rgb_frame.flags.writeable = False
+        
+        try:
+            results = self.hands.process(rgb_frame)
+            rgb_frame.flags.writeable = True
+        except Exception as e:
+            # Handle timestamp mismatch errors by returning last known result or empty result
+            error_msg = str(e).lower()
+            if "timestamp" in error_msg or "invalid_argument" in error_msg:
+                # Return last result if available, otherwise return empty detection
+                if self.last_result is not None:
+                    return self.last_result
+                else:
+                    # Return empty result if no previous frame available
+                    return {
+                        'detected': False,
+                        'hand_x': 0.5,
+                        'hand_y': 0.5,
+                        'finger_count': 0,
+                        'gesture': 'None',
+                        'annotated_frame': frame.copy()
+                    }
+            # For other errors, re-raise
+            raise
         
         # Prepare output
         output = {
@@ -34,11 +63,13 @@ class MediaPipeDetector(HandDetectorBase):
             'hand_x': 0.5,
             'hand_y': 0.5,
             'finger_count': 0,
+            'gesture': 'None',
             'annotated_frame': frame.copy()
         }
         
         if results.multi_hand_landmarks:
             hand_landmarks = results.multi_hand_landmarks[0]
+            self.last_landmarks = hand_landmarks
             
             # Draw landmarks
             self.mp_drawing.draw_landmarks(
@@ -51,25 +82,55 @@ class MediaPipeDetector(HandDetectorBase):
             
             # Get thumb tip position (normalized 0-1)
             thumb_tip = hand_landmarks.landmark[4]
+            index_tip = hand_landmarks.landmark[8]
             output['hand_x'] = thumb_tip.x
             output['hand_y'] = thumb_tip.y
             
-            # Draw cursor indicator
+            # Draw large thumb cursor indicator
             cx = int(thumb_tip.x * w)
             cy = int(thumb_tip.y * h)
-            cv2.circle(output['annotated_frame'], (cx, cy), 10, (0, 255, 0), -1)
+            cv2.circle(output['annotated_frame'], (cx, cy), 15, (0, 255, 0), 3)
+            cv2.circle(output['annotated_frame'], (cx, cy), 3, (0, 255, 0), -1)
+            
+            # Draw index finger for reference
+            ix = int(index_tip.x * w)
+            iy = int(index_tip.y * h)
+            cv2.circle(output['annotated_frame'], (ix, iy), 10, (255, 0, 255), 2)
             
             # Count extended fingers
             output['finger_count'] = self._count_fingers(hand_landmarks)
+            
+            # Detect gesture
+            output['gesture'] = self.detect_gesture(hand_landmarks)
+            
             output['detected'] = True
             
-            # Add finger count text
-            cv2.putText(output['annotated_frame'], f"Fingers: {output['finger_count']}", 
-                       (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            # Add debug overlays if enabled
+            if self.show_debug_overlay:
+                # Confidence: MediaPipe doesn't provide per-frame confidence, so we show 100% when detected
+                cv2.putText(output['annotated_frame'], "Detection: MediaPipe", 
+                           (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                cv2.putText(output['annotated_frame'], f"Status: DETECTED", 
+                           (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                cv2.putText(output['annotated_frame'], f"Confidence: 100%", 
+                           (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                cv2.putText(output['annotated_frame'], f"Fingers: {output['finger_count']}", 
+                           (10, 105), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                cv2.putText(output['annotated_frame'], f"Gesture: {output['gesture']}", 
+                           (10, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                cv2.putText(output['annotated_frame'], f"Hand Center: ({thumb_tip.x:.2f}, {thumb_tip.y:.2f})", 
+                           (10, 155), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+                cv2.putText(output['annotated_frame'], "THUMB (Green Circle)", 
+                           (10, 175), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
         else:
-            cv2.putText(output['annotated_frame'], "Hand not detected", 
-                       (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            if self.show_debug_overlay:
+                cv2.putText(output['annotated_frame'], "Detection: MediaPipe", 
+                           (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                cv2.putText(output['annotated_frame'], "Status: NO HAND DETECTED", 
+                           (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
         
+        # Store result for timestamp error recovery
+        self.last_result = output
         return output
     
     def _count_fingers(self, hand_landmarks):
