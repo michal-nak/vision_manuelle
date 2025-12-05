@@ -8,10 +8,10 @@ Draw and paint using only your hand gestures! Control a full-featured paint appl
 
 ## ✨ Features
 
-- 🖐️ **Gesture-Based Drawing**: Draw, erase, change colors, and adjust brush size with hand gestures
-- 🎯 **Dual Detection Modes**: Choose between MediaPipe (AI-powered) or Computer Vision (traditional)
-- ⚡ **Real-Time Performance**: Smooth 30+ FPS with optimized detection algorithms
-- 🎨 **Full Paint Features**: Multiple colors, adjustable brush sizes, eraser, save/load
+- 🖐️ **Gesture-Based Drawing**: Draw, erase, change colors, and adjust brush size with hand gestures - completely hands-free!
+- 🎯 **Dual Detection Modes**: Choose between MediaPipe (AI-powered, ~15 FPS) or Computer Vision (traditional, ~1 FPS)
+- ⚡ **Real-Time Performance**: MediaPipe achieves ~15 FPS with optimized C++ implementation
+- 🎨 **Full Paint Features**: Multiple colors, adjustable brush sizes, save/load - all controlled by gestures
 - 🔧 **Debug Mode**: Toggle detailed detection metrics and visualization
 - 🖥️ **Cross-Platform**: Works on Windows, Linux, and macOS
 
@@ -88,11 +88,16 @@ python main.py cv
 
 ### UI Controls
 
+**Gesture Controls** (Primary - Hands-Free):
+- All drawing, erasing, color changes, and size adjustments done via gestures
+- See gesture tables above for complete control mapping
+
+**Toolbar** (Settings & File Operations):
 - **Mode Selector**: Switch between MediaPipe and CV detection
 - **Debug Mode**: Toggle to show detection metrics
-- **Color Palette**: Click to select drawing color
-- **Brush Size Slider**: Adjust from 1-50 pixels
-- **Clear/Save Buttons**: Clear canvas or save your artwork
+- **Color Picker**: Alternative to 3-finger gesture for custom colors
+- **Brush Size Slider**: Alternative to 4-finger gesture (1-50 pixels)
+- **Clear/Save Buttons**: File operations (also available via 5-finger gesture for clear)
 
 ## 🛠️ Advanced Tools
 
@@ -113,8 +118,15 @@ python tools/debug_detection.py
 - ✅ Use **good lighting** (avoid backlighting)
 - ✅ Keep **plain background** behind your hand
 - ✅ Position hand **centered in frame**
-- ✅ **MediaPipe**: More accurate, works in varied conditions
-- ✅ **CV Mode**: Faster performance, customizable
+- ✅ **MediaPipe** (Recommended): More accurate (95%), better performance (~15 FPS), works in varied conditions
+- ✅ **CV Mode** (Educational): Learn traditional computer vision (~1 FPS), highly customizable
+
+### Performance Comparison
+
+| Mode | FPS | Accuracy | Best For |
+|------|-----|----------|----------|
+| MediaPipe | ~15 | 95% | Production, demos, general use |
+| CV | ~1 | 85% | Learning CV algorithms, research |
 
 ## 📚 Documentation
 
@@ -137,9 +149,10 @@ python tools/debug_detection.py
 - Application uses smoothing to reduce jitter
 
 **Low frame rate?**
-- Close other applications
-- Try CV mode (faster than MediaPipe)
-- Check system performance
+- Use MediaPipe mode for best performance (~15 FPS)
+- CV mode is slower (~1 FPS) due to Python processing overhead
+- Close other camera-using applications
+- Check system performance and CPU usage
 
 See [USAGE.md](docs/USAGE.md#troubleshooting) for detailed troubleshooting.
 

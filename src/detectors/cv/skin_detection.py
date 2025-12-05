@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 
-def detect_skin_ycrcb_hsv(frame, ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper):
+def detect_skin_ycrcb_hsv(frame, ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper, denoise_h=10):
     """
     Detect skin using both YCrCb and HSV color spaces
     
@@ -15,12 +15,13 @@ def detect_skin_ycrcb_hsv(frame, ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper)
         ycrcb_upper: Upper bound for YCrCb
         hsv_lower: Lower bound for HSV
         hsv_upper: Upper bound for HSV
+        denoise_h: Denoising strength (default 10)
         
     Returns:
         Combined binary mask
     """
     # Adaptive filtering for denoising
-    denoised = cv2.fastNlMeansDenoisingColored(frame, None, 10, 10, 7, 21)
+    denoised = cv2.fastNlMeansDenoisingColored(frame, None, denoise_h, denoise_h, 7, 21)
     
     # YCrCb skin detection
     ycrcb = cv2.cvtColor(denoised, cv2.COLOR_BGR2YCrCb)
@@ -45,22 +46,25 @@ def detect_skin_ycrcb_hsv(frame, ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper)
     return mask_combined
 
 
-def apply_morphological_operations(mask):
+def apply_morphological_operations(mask, kernel_small=3, kernel_large=7, iterations=2):
     """
     Apply morphological operations to clean up mask
     
     Args:
         mask: Binary mask
+        kernel_small: Size of small kernel for erosion
+        kernel_large: Size of large kernel for dilation
+        iterations: Number of iterations for operations
         
     Returns:
         Cleaned mask
     """
     # Morphological operations to clean up mask
-    kernel_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    kernel_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_small, kernel_small))
+    kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_large, kernel_large))
     
-    mask = cv2.erode(mask, kernel_erode, iterations=2)
-    mask = cv2.dilate(mask, kernel_dilate, iterations=2)
+    mask = cv2.erode(mask, kernel_erode, iterations=iterations)
+    mask = cv2.dilate(mask, kernel_dilate, iterations=iterations)
     
     # Gaussian blur to smooth edges
     mask = cv2.GaussianBlur(mask, (5, 5), 0)

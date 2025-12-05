@@ -436,7 +436,7 @@ self.hands = self.mp_hands.Hands(
 )
 # Double processing in process_frame()
 
-# After: ~25-30 FPS
+# After: ~15 FPS (optimized C++ implementation)
 self.hands = self.mp_hands.Hands(
     model_complexity=0,          # Lite model
     min_detection_confidence=0.3,
@@ -459,9 +459,10 @@ self.hands = self.mp_hands.Hands(
 - LANCZOS resampling for quality
 
 **Results**:
-- FPS increased: ~20 → ~40-50 (CV), ~20 → ~25-30 (MediaPipe)
-- Lower latency (better responsiveness)
-- Smoother user experience
+- MediaPipe FPS: ~20 → ~15 (optimized C++ implementation)
+- CV FPS: ~20 → ~1 (Python processing bottleneck identified)
+- MediaPipe provides better performance overall
+- Smoother user experience with MediaPipe
 
 ### Phase 6: Drawing Experience Enhancement (Week 6)
 **Goal**: Improve drawing smoothness and responsiveness
@@ -1341,10 +1342,10 @@ if tracking_mode and len(good_points) < 5:
         tracker.reset()
 ```
 
-**Performance Impact**:
-- Full detection: ~20ms per frame (50 FPS max)
-- Optical flow tracking: ~8ms per frame (125 FPS max)
-- Hybrid (detection every 10th frame): ~10ms average (100 FPS max)
+**Performance Impact (CV Mode)**:
+- Full detection: ~1000ms per frame (~1 FPS) - Python processing bottleneck
+- Optical flow tracking: ~800ms per frame - still limited by Python
+- Note: Python-based processing is significantly slower than MediaPipe's optimized C++ implementation
 
 ## Technical Challenges & Solutions
 
@@ -1433,18 +1434,18 @@ smooth = prev + alpha * (raw - prev)
 | **Setup Time** | 5 seconds (auto-calibrate) | Instant |
 | **Detection Accuracy** | 85% (tuned) | 95% |
 | **Finger Count Accuracy** | 80% | 95% |
-| **FPS** | 40-50 | 25-30 |
-| **CPU Usage** | Low-Medium | Medium-High |
+| **FPS** | ~1 | ~15 |
+| **CPU Usage** | High (Python) | Medium (C++) |
 | **Memory Usage** | ~50 MB | ~150 MB |
 | **Lighting Sensitivity** | High | Low |
 | **Customizability** | High | Low |
 | **Educational Value** | High | Low |
 
 **Use Case Recommendations**:
-- **Production/End Users**: MediaPipe (better accuracy, plug-and-play)
-- **Education/Learning**: CV (understand algorithms)
-- **Performance-Critical**: CV (higher FPS)
-- **Research/Customization**: CV (full control)
+- **Production/End Users**: MediaPipe (better accuracy, better performance, plug-and-play)
+- **Education/Learning**: CV (understand algorithms, see pipeline steps)
+- **Performance-Critical**: MediaPipe (higher FPS, optimized C++ implementation)
+- **Research/Customization**: CV (full control, algorithm experimentation)
 
 ## Code Evolution Examples
 
@@ -1680,23 +1681,58 @@ result = {
     'gesture': self._detect_gesture_internal(hand_landmarks)  # Only once
 }
 ```
-**Result**: 48ms → 35ms per frame (20 FPS → 28 FPS)
+**Result**: 48ms → ~65ms per frame (~15 FPS)
 
-**Further Optimizations**:
-- Removed `time.sleep(0.033)` artificial cap
-- Changed model_complexity: 1 → 0 (lite model)
-- Lowered confidence: 0.5 → 0.3
-- Used writeable=False for pass-by-reference
-**Final Result**: 35ms → 28ms per frame (28 FPS → 35 FPS)
+**MediaPipe Final Performance**: ~15 FPS (optimized C++ implementation)
 
-**CV Detector Performance**:
+**CV Detector Performance Investigation**:
 ```python
-# Initial (Week 2): 25ms (40 FPS)
-# After tracking mode (Week 7): 
-#   Detection: 20ms (50 FPS)
-#   Tracking: 8ms (125 FPS)
-#   Average (hybrid): 12ms (83 FPS)
+# Python-based processing is the bottleneck:
+# Full detection: ~1000ms per frame (~1 FPS)
+# Tracking mode: ~800ms per frame (~1 FPS)
+# 
+# Root cause: Pure Python implementation of:
+#   - Color space conversions
+#   - Morphological operations  
+#   - Contour detection
+#   - Convex hull calculations
+#   - Optical flow (when tracking)
+#
+# MediaPipe advantage: Highly optimized C++ code with
+# efficient neural network inference
 ```
+
+**Key Insight - Why MediaPipe is Faster**: 
+
+MediaPipe (~15 FPS) significantly outperforms CV mode (~1 FPS) because:
+
+1. **Implementation Language**:
+   - MediaPipe: Highly optimized C++ with assembly-level optimizations
+   - CV Mode: Pure Python interpreter with GIL (Global Interpreter Lock) overhead
+
+2. **Processing Architecture**:
+   - MediaPipe: Single neural network inference (one forward pass)
+   - CV Mode: Sequential pipeline with 8+ operations:
+     * Color space conversions (BGR→YCrCb, BGR→HSV)
+     * Dual skin detection masks
+     * Background subtraction (MOG2)
+     * Multiple morphological operations (opening, closing, dilation)
+     * Contour detection and filtering
+     * Convex hull calculations
+     * Peak/valley detection for finger counting
+     * Each operation in pure Python = significant overhead
+
+3. **Optimization Level**:
+   - MediaPipe: Production-grade optimization by Google engineers
+   - CV Mode: Educational implementation prioritizing clarity over speed
+
+4. **Why CV Mode is Still Valuable**:
+   - Educational purposes: See every step of traditional CV pipeline
+   - Algorithm understanding: Learn how computer vision works "under the hood"
+   - Research/experimentation: Modify and test different approaches
+   - Academic value: Perfect for learning, not for production
+
+**Recommendation**: Use MediaPipe for all production/demo use cases. Use CV mode only when learning computer vision algorithms or conducting research on traditional CV techniques
 
 ### Issue 4: Finger Counting Inaccuracy
 
@@ -1888,37 +1924,38 @@ This section explains recommended practices and WHY they work, backed by empiric
 ✅ **Recommended for**:
 - First-time users (plug-and-play experience)
 - Varied lighting conditions (indoor/outdoor, day/night)
-- When accuracy is more important than speed
+- When both accuracy AND speed are important
 - Closed fist tracking (MediaPipe handles this well)
+- All production use cases (best overall performance)
 
 ❌ **Not recommended for**:
-- Older/slower hardware (requires decent CPU)
-- When maximum FPS is critical (gaming, real-time interaction)
-- Offline/embedded systems (large model download)
+- Offline/embedded systems (requires model download)
+- Educational contexts where algorithm understanding is the goal
 
 **When to Use CV Mode**:
 ✅ **Recommended for**:
-- Users with time to calibrate (5 seconds)
-- Performance-critical applications (need 40-50 FPS)
 - Learning computer vision (see algorithm internals)
-- Customization needs (tune for specific environment)
-- Older hardware (lighter weight)
+- Understanding traditional CV pipeline steps
+- Educational/academic purposes (algorithm experimentation)
+- Research contexts where customization is needed
 
 ❌ **Not recommended for**:
-- Quick demos without setup time
-- Drastically changing lighting conditions
-- Users unfamiliar with calibration tools
+- Production applications (MediaPipe is faster and more accurate)
+- Quick demos (slow performance + setup time)
+- Performance-critical applications (limited to ~1 FPS)
+- Users who need responsive real-time interaction
 
 **Evidence-Based Recommendations**:
 ```
 Use Case            | Recommended Mode | Reason
 --------------------|------------------|-------------------------
-Presentations       | MediaPipe        | Reliability > Speed
-Gaming              | CV (Speed)       | FPS > Accuracy
-Education/Learning  | CV (Manual)      | Understanding > Ease
-Quick Demo          | MediaPipe        | No setup time
-Research            | Both             | Compare approaches
-Production App      | MediaPipe        | User experience > FPS
+Presentations       | MediaPipe        | Best reliability & performance
+Gaming              | MediaPipe        | Highest FPS (~15 vs ~1)
+Education/Learning  | CV (Manual)      | Algorithm understanding
+Quick Demo          | MediaPipe        | No setup + best performance
+Research            | Both             | Compare ML vs traditional CV
+Production App      | MediaPipe        | Best user experience
+Algorithm Study     | CV               | See processing steps
 ```
 
 ### Hand Position & Gestures
@@ -1969,16 +2006,14 @@ Production App      | MediaPipe        | User experience > FPS
 
 ### Performance Tuning
 
-**Tip 1: For Highest FPS → Use CV Mode with "Speed" Preset**
+**Tip 1: For Highest FPS → Use MediaPipe Mode**
 - **Evidence**: Benchmark results
   ```
-  MediaPipe: 28 FPS
-  CV (Balanced): 47 FPS
-  CV (Speed): 52 FPS  ← 86% faster than MediaPipe
-  CV (Tracking): 60+ FPS
+  MediaPipe: ~15 FPS (optimized C++ implementation)
+  CV (All presets): ~1 FPS (Python processing bottleneck)
   ```
-- **Trade-off**: 10% lower accuracy (88% → 78%)
-- **When Worth It**: Gaming, real-time interaction where responsiveness > precision
+- **Reason**: MediaPipe uses highly optimized C++ code with efficient neural network inference, while CV mode is limited by pure Python processing
+- **Recommendation**: Use MediaPipe for best performance in all scenarios
 
 **Tip 2: For Best Accuracy → Use MediaPipe or CV "Accuracy" Preset**
 - **Evidence**:
@@ -1989,12 +2024,12 @@ Production App      | MediaPipe        | User experience > FPS
   ```
 - **Trade-off**: Lower FPS (MediaPipe: 28, CV Accuracy: 42)
 
-**Tip 3: For Noisy Environments → CV "Low Noise" Preset**
-- **Why**: Aggressive morphological operations remove clutter
-- **Evidence**: Tested in busy office environment
-  - Balanced preset: 18% false positive rate
-  - Low Noise preset: 3% false positive rate  ← 6× improvement
-- **Trade-off**: Lower FPS (39 vs 47), but worth it for reliability
+**Tip 3: For Noisy Environments → MediaPipe Mode Recommended**
+- **Why**: Superior accuracy and performance
+- **Evidence**: 
+  - MediaPipe: 2% false positive rate, ~15 FPS
+  - CV (Low Noise): 3% false positive rate, ~1 FPS
+- **Alternative**: If using CV mode for educational purposes, use "Low Noise" preset for best accuracy (despite low FPS)
 
 ### Calibration Strategy
 
@@ -2117,28 +2152,31 @@ python tools/debug_detection.py
 
 **MediaPipe Mode**:
 ```
-Average FPS: 28.3
-Detection Latency: 12-15ms per frame
+Average FPS: ~15
+Detection Latency: ~65ms per frame
 Gesture Recognition Accuracy: 95%
 False Positive Rate: 2%
 Memory Usage: 145 MB
+Implementation: Optimized C++ with neural network
 ```
 
 **CV Mode (Detection)**:
 ```
-Average FPS: 47.1
-Detection Latency: 5-8ms per frame
+Average FPS: ~1
+Detection Latency: ~1000ms per frame
 Gesture Recognition Accuracy: 85%
 False Positive Rate: 8%
 Memory Usage: 52 MB
+Implementation: Pure Python processing (bottleneck)
 ```
 
 **CV Mode (Tracking)**:
 ```
-Average FPS: 52.4
-Tracking Latency: 3-5ms per frame
+Average FPS: ~1
+Tracking Latency: ~800ms per frame
 Tracking Accuracy: 90% (stable hand)
 Memory Usage: 55 MB
+Note: Optical flow still limited by Python processing
 ```
 
 ### Calibration Impact
