@@ -43,7 +43,7 @@ def load_processing_params():
         'denoise_h': 10,
         'kernel_small': 3,
         'kernel_large': 7,
-        'morph_iterations': 2,
+        'morph_iterations': 1,  # Reduced from 3 - was over-eroding hands (80% detection failure)
         'min_contour_area': 1000,
         'max_contour_area': 50000
     }

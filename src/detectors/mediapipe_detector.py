@@ -26,8 +26,14 @@ class MediaPipeDetector(HandDetectorBase):
         self.show_debug_overlay = show_debug
         self.last_result = None
     
-    def process_frame(self, frame):
-        """Process frame using MediaPipe"""
+    def process_frame(self, frame, use_palm_center=False):
+        """Process frame using MediaPipe
+        
+        Args:
+            frame: Input frame
+            use_palm_center: If True, use palm center for hand_x/hand_y instead of thumb tip.
+                           Used during calibration/optimization for better alignment with CV detector.
+        """
         h, w = frame.shape[:2]
         
         # Convert to RGB for MediaPipe (writeable flag improves performance)
@@ -80,17 +86,32 @@ class MediaPipeDetector(HandDetectorBase):
                 self.mp_drawing_styles.get_default_hand_connections_style()
             )
             
-            # Get thumb tip position (normalized 0-1)
+            # Get hand position (normalized 0-1)
             thumb_tip = hand_landmarks.landmark[4]
             index_tip = hand_landmarks.landmark[8]
-            output['hand_x'] = thumb_tip.x
-            output['hand_y'] = thumb_tip.y
             
-            # Draw large thumb cursor indicator
-            cx = int(thumb_tip.x * w)
-            cy = int(thumb_tip.y * h)
-            cv2.circle(output['annotated_frame'], (cx, cy), 15, (0, 255, 0), 3)
-            cv2.circle(output['annotated_frame'], (cx, cy), 3, (0, 255, 0), -1)
+            if use_palm_center:
+                # Use palm center for calibration/optimization (better alignment with CV detector)
+                wrist = hand_landmarks.landmark[0]
+                middle_mcp = hand_landmarks.landmark[9]  # Middle finger base
+                output['hand_x'] = (wrist.x + middle_mcp.x) / 2
+                output['hand_y'] = (wrist.y + middle_mcp.y) / 2
+                
+                # Draw palm center indicator
+                cx = int(output['hand_x'] * w)
+                cy = int(output['hand_y'] * h)
+                cv2.circle(output['annotated_frame'], (cx, cy), 15, (255, 165, 0), 3)  # Orange for palm
+                cv2.circle(output['annotated_frame'], (cx, cy), 3, (255, 165, 0), -1)
+            else:
+                # Use thumb tip for drawing (default)
+                output['hand_x'] = thumb_tip.x
+                output['hand_y'] = thumb_tip.y
+                
+                # Draw large thumb cursor indicator
+                cx = int(thumb_tip.x * w)
+                cy = int(thumb_tip.y * h)
+                cv2.circle(output['annotated_frame'], (cx, cy), 15, (0, 255, 0), 3)
+                cv2.circle(output['annotated_frame'], (cx, cy), 3, (0, 255, 0), -1)
             
             # Draw index finger for reference
             ix = int(index_tip.x * w)
@@ -118,9 +139,11 @@ class MediaPipeDetector(HandDetectorBase):
                            (10, 105), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
                 cv2.putText(output['annotated_frame'], f"Gesture: {output['gesture']}", 
                            (10, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-                cv2.putText(output['annotated_frame'], f"Hand Center: ({thumb_tip.x:.2f}, {thumb_tip.y:.2f})", 
+                position_label = "Palm Center" if use_palm_center else "Thumb Tip"
+                color_label = "Orange" if use_palm_center else "Green"
+                cv2.putText(output['annotated_frame'], f"Hand Center: ({output['hand_x']:.2f}, {output['hand_y']:.2f})", 
                            (10, 155), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
-                cv2.putText(output['annotated_frame'], "THUMB (Green Circle)", 
+                cv2.putText(output['annotated_frame'], f"{position_label} ({color_label} Circle)", 
                            (10, 175), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
         else:
             if self.show_debug_overlay:

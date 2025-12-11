@@ -4,15 +4,14 @@ Shows all processing steps to help diagnose why hand isn't being detected
 """
 import cv2
 import numpy as np
-import json
-import sys
-from pathlib import Path
-from datetime import datetime
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
+from debug_utils import init_camera, save_color_config
 from src.detectors import CVDetector
-from src.core.utils import find_camera
+from src.detectors.cv.skin_detection import (
+    select_hand_contour_intelligent,
+    filter_forearm_by_shape,
+    filter_forearm_by_orientation,
+    detect_wrist_and_crop
+)
 
 def main():
     print("=" * 70)
@@ -28,13 +27,9 @@ def main():
     print("  'q' - Quit")
     print("=" * 70)
     
-    cap = find_camera()
+    cap = init_camera()
     if not cap:
-        print("Could not open camera")
         return
-    
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     
     detector = CVDetector()
     
@@ -134,7 +129,7 @@ def main():
         
         # Step 5: Background subtraction
         fg_mask = None
-        if use_bg_subtraction and detector.frame_count > detector.bg_learning_frames:
+        if use_bg_subtraction and detector.state.frame_count > detector.state.bg_learning_frames:
             fg_mask = detector.bg_subtractor.apply(frame, learningRate=0.001)
             kernel_motion = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
             fg_mask_dilated = cv2.dilate(fg_mask, kernel_motion, iterations=2)
@@ -145,7 +140,7 @@ def main():
             mask_with_bg = mask_combined.copy()
             fg_mask = np.zeros_like(mask_combined)
         
-        detector.frame_count += 1
+        detector.state.frame_count += 1
         
         # Step 6: Morphological operations
         kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -154,32 +149,85 @@ def main():
         mask_morph = cv2.morphologyEx(mask_with_bg, cv2.MORPH_OPEN, kernel_small, iterations=2)
         mask_morph = cv2.morphologyEx(mask_morph, cv2.MORPH_CLOSE, kernel_large, iterations=3)
         
-        # Step 7: Find contours
+        # Step 7: Find contours with NEW FOREARM FILTERING
         contours, _ = cv2.findContours(mask_morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # Draw contours and info
         result_frame = frame.copy()
-        valid_contours = []
+        h, w = frame.shape[:2]
+        
+        # Draw ALL contours in red (before filtering)
+        all_valid_by_area = []
+        rejection_reasons = {}
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area > 3000:
-                valid_contours.append(cnt)
-                cv2.drawContours(result_frame, [cnt], -1, (0, 255, 0), 2)
+            if 3000 < area < w * h * 0.5:  # Basic area filter
+                all_valid_by_area.append(cnt)
+                cv2.drawContours(result_frame, [cnt], -1, (0, 0, 255), 1)  # Red = rejected/unfiltered
+        
+        # Apply intelligent forearm filtering
+        hand_contour = None
+        filter_stage = "None"
+        
+        if all_valid_by_area:
+            # Stage 1: Intelligent selection (geometric scoring)
+            hand_contour = select_hand_contour_intelligent(all_valid_by_area, frame.shape)
+            
+            if hand_contour is not None:
+                filter_stage = "Intelligent Selection ✓"
                 
-                # Show area
-                M = cv2.moments(cnt)
-                if M["m00"] != 0:
-                    cx = int(M["m10"] / M["m00"])
-                    cy = int(M["m01"] / M["m00"])
-                    cv2.putText(result_frame, f"Area: {int(area)}", (cx-50, cy), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
+                # Stage 2: Shape validation
+                if not filter_forearm_by_shape(hand_contour, h):
+                    rejection_reasons["shape"] = "Failed shape validation (aspect/solidity/compactness)"
+                    hand_contour = None
+                    filter_stage = "Shape Filter ✗"
+                
+                # Stage 3: Orientation validation
+                elif not filter_forearm_by_orientation(hand_contour):
+                    rejection_reasons["orientation"] = "Failed orientation (vertical forearm detected)"
+                    hand_contour = None
+                    filter_stage = "Orientation Filter ✗"
+                
+                # Stage 4: Wrist detection and crop
+                elif hand_contour is not None:
+                    original_contour = hand_contour.copy()
+                    hand_contour = detect_wrist_and_crop(mask_morph, hand_contour)
+                    filter_stage = "All Filters Passed + Wrist Crop ✓"
+            else:
+                filter_stage = "Intelligent Selection ✗ (low score)"
+                rejection_reasons["selection"] = "All contours scored poorly (likely forearms)"
+        
+        # Draw final selected contour in GREEN
+        valid_contours = []
+        if hand_contour is not None:
+            valid_contours.append(hand_contour)
+            cv2.drawContours(result_frame, [hand_contour], -1, (0, 255, 0), 3)  # Green = accepted
+            
+            # Show area and geometric metrics
+            area = cv2.contourArea(hand_contour)
+            x, y, w_box, h_box = cv2.boundingRect(hand_contour)
+            aspect = w_box / float(h_box) if h_box > 0 else 0
+            hull = cv2.convexHull(hand_contour)
+            hull_area = cv2.contourArea(hull)
+            solidity = area / hull_area if hull_area > 0 else 0
+            
+            M = cv2.moments(hand_contour)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                cv2.putText(result_frame, f"Area: {int(area)}", (cx-60, cy-30), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(result_frame, f"Aspect: {aspect:.2f}", (cx-60, cy-10), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(result_frame, f"Solid: {solidity:.2f}", (cx-60, cy+10), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
 
         
         # Enhanced info overlay with all metrics
         # Semi-transparent background
         overlay = result_frame.copy()
-        cv2.rectangle(overlay, (5, 5), (635, 180), (0, 0, 0), -1)
+        cv2.rectangle(overlay, (5, 5), (635, 230), (0, 0, 0), -1)
         cv2.addWeighted(overlay, 0.6, result_frame, 0.4, 0, result_frame)
         
         info_y = 30
@@ -192,10 +240,22 @@ def main():
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, status_color, 2)
         info_y += 30
         
-        # Contour info
-        cv2.putText(result_frame, f"Valid Contours: {len(valid_contours)}", (10, info_y), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        # Forearm Filter Stage
+        cv2.putText(result_frame, f"Filter Stage: {filter_stage}", (10, info_y), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 200, 100), 2)
         info_y += 25
+        
+        # Contour counts
+        cv2.putText(result_frame, f"Raw Contours: {len(all_valid_by_area)} | Final: {len(valid_contours)}", (10, info_y), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        info_y += 25
+        
+        # Rejection reasons
+        if rejection_reasons:
+            for reason_key, reason_text in rejection_reasons.items():
+                cv2.putText(result_frame, f"Rejected: {reason_text[:50]}", (10, info_y), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 100, 100), 1)
+                info_y += 20
         
         # If hand detected, show additional metrics
         if valid_contours:
@@ -216,7 +276,7 @@ def main():
                    (10, info_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
         info_y += 20
         
-        cv2.putText(result_frame, f"Frame: {detector.frame_count} | Trackbars: {'OPEN' if show_trackbars else 'CLOSED'} (t)", 
+        cv2.putText(result_frame, f"Frame: {detector.state.frame_count} | Trackbars: {'OPEN' if show_trackbars else 'CLOSED'} (t)", 
                    (10, info_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
         info_y += 20
         
@@ -286,7 +346,7 @@ def main():
             detector.bg_subtractor = cv2.createBackgroundSubtractorMOG2(
                 history=500, varThreshold=16, detectShadows=False
             )
-            detector.frame_count = 0
+            detector.state.frame_count = 0
             print("✅ Background subtractor reset")
         elif key == ord('d'):
             use_denoising = not use_denoising
@@ -303,23 +363,11 @@ def main():
                 show_trackbars = False
                 print("✅ Trackbar window closed")
         elif key == ord('s'):
-            # Save to JSON config file
-            config_path = Path(__file__).parent.parent / 'skin_detection_config.json'
-            config = {
-                "timestamp": datetime.now().isoformat(),
-                "ycrcb_lower": detector.ycrcb_lower.tolist(),
-                "ycrcb_upper": detector.ycrcb_upper.tolist(),
-                "hsv_lower": detector.hsv_lower.tolist(),
-                "hsv_upper": detector.hsv_upper.tolist(),
-                "description": "Skin detection color ranges for CV detector"
-            }
-            with open(config_path, 'w') as f:
-                json.dump(config, f, indent=2)
-            
+            save_color_config(detector.ycrcb_lower, detector.ycrcb_upper, 
+                            detector.hsv_lower, detector.hsv_upper)
             print("\n" + "=" * 70)
             print("✅ SAVED TO CONFIG FILE")
             print("=" * 70)
-            print(f"Configuration saved to {config_path}")
             print(f"YCrCb Lower: {detector.ycrcb_lower.tolist()}")
             print(f"YCrCb Upper: {detector.ycrcb_upper.tolist()}")
             print(f"HSV Lower: {detector.hsv_lower.tolist()}")

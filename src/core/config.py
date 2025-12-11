@@ -40,14 +40,24 @@ def _load_color_ranges():
 YCRCB_LOWER, YCRCB_UPPER, HSV_LOWER, HSV_UPPER = _load_color_ranges()
 
 # Default color ranges (fallback for reset functionality)
-YCRCB_LOWER_DEFAULT = [0, 133, 77]
-YCRCB_UPPER_DEFAULT = [255, 173, 127]
-HSV_LOWER_DEFAULT = [0, 30, 60]
-HSV_UPPER_DEFAULT = [20, 150, 255]
+# WIDER BOUNDS for testing without calibration - covers more skin tones
+YCRCB_LOWER_DEFAULT = [0, 125, 70]   # Was [0, 133, 77] - lowered Cr/Cb minimums
+YCRCB_UPPER_DEFAULT = [255, 180, 135]  # Was [255, 173, 127] - raised Cr/Cb maximums
+HSV_LOWER_DEFAULT = [0, 20, 50]      # Was [0, 30, 60] - lowered S/V minimums
+HSV_UPPER_DEFAULT = [25, 170, 255]   # Was [20, 150, 255] - raised H/S maximums
 
 # Detection settings
-MIN_HAND_AREA = 3000
-MAX_HAND_AREA = 16000
+# MIN_HAND_AREA: Minimum contour area in pixels (filters noise)
+# Lower value = more sensitive but more false positives
+# Reduced to 1500 - 2000 was rejecting valid hands
+MIN_HAND_AREA = 1500
+
+# MAX_HAND_AREA: Maximum contour area as fraction of frame (0.0-1.0)
+# Higher value = allows hands closer to camera
+# Frame size: 640x480 = 307200 pixels
+# 0.7 = 70% of frame = ~215000 pixels (very generous for close hands)
+# Increased from 0.5 based on benchmark analysis
+MAX_HAND_AREA = 0.7  # 70% of frame area
 
 # Background subtractor settings
 BG_HISTORY = 500
@@ -55,10 +65,11 @@ BG_VAR_THRESHOLD = 16
 BG_DETECT_SHADOWS = False
 
 # MediaPipe settings
-MP_MODEL_COMPLEXITY = 0
-MP_MIN_DETECTION_CONFIDENCE = 0.3
-MP_MIN_TRACKING_CONFIDENCE = 0.3
-MP_STATIC_IMAGE_MODE = False
+MP_MODEL_COMPLEXITY = 0  # 0=Lite (fastest), 1=Full (most accurate)
+# Lower confidence = more detections but may include false positives
+MP_MIN_DETECTION_CONFIDENCE = 0.5  # 0.5 = balanced, 0.3 = very lenient
+MP_MIN_TRACKING_CONFIDENCE = 0.5   # 0.5 = balanced tracking
+MP_STATIC_IMAGE_MODE = False       # False = video mode (faster)
 
 # Calibration settings
 CALIBRATION_DURATION = 5

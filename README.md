@@ -59,9 +59,36 @@ Draw and paint using only your hand gestures! Control a full-featured paint appl
 python main.py
 ```
 
-**CV Mode**:
+**CV Mode** (with auto-calibration):
 ```bash
 python main.py cv
+```
+
+**CV Mode** (skip calibration, use saved config):
+```bash
+python main.py cv --skip-calibration
+# or shorthand:
+python main.py cv -s
+```
+
+**CV Mode** (skip auto-optimization, faster startup):
+```bash
+python main.py cv --skip-optimization
+# or shorthand:
+python main.py cv -o
+```
+
+**CV Mode** (with debug overlay):
+```bash
+python main.py cv --debug
+# or shorthand:
+python main.py cv -d
+```
+
+**Combine flags**:
+```bash
+python main.py cv -od  # Skip optimization, enable debug
+python main.py cv -s   # Skip all calibration
 ```
 
 ### Using Gestures
@@ -99,15 +126,34 @@ python main.py cv
 - **Brush Size Slider**: Alternative to 4-finger gesture (1-50 pixels)
 - **Clear/Save Buttons**: File operations (also available via 5-finger gesture for clear)
 
-## 🛠️ Advanced Tools
+## 🛠️ Advanced Features
 
-### Skin Detection Tuner
-Fine-tune CV mode skin detection for your lighting:
+### Auto-Calibration System
+
+**CV Mode now includes intelligent calibration**:
+- **10-second color calibration**: MediaPipe detects your hand, system samples skin tones
+- **18-second auto-optimization**: Tests 6 parameter presets against MediaPipe ground truth
+- **IoU-based validation**: Uses Intersection over Union (30% threshold) for spatial accuracy
+- **Palm center alignment**: During calibration, both detectors use palm center for accurate comparison
+- **Visual feedback**: See both MediaPipe (blue) and CV (green) detections during optimization
+
+**Command-line options**:
+```bash
+python main.py cv              # Full calibration (28s total)
+python main.py cv -o           # Color only, skip optimization (10s)
+python main.py cv -s           # Skip all, use saved config (instant)
+python main.py cv -d           # Enable debug overlay
+```
+
+### Manual Calibration Tools
+
+**Skin Detection Tuner**:
+Fine-tune all 21 parameters for difficult lighting:
 ```bash
 python tools/skin_tuner.py
 ```
 
-### Pipeline Visualizer
+**Pipeline Visualizer**:
 See all 8 processing steps of the CV detector:
 ```bash
 python tools/debug_detection.py
@@ -118,8 +164,10 @@ python tools/debug_detection.py
 - ✅ Use **good lighting** (avoid backlighting)
 - ✅ Keep **plain background** behind your hand
 - ✅ Position hand **centered in frame**
+- ✅ **First-time CV users**: Run full calibration once, then use `-s` flag for instant startup
+- ✅ **Quick testing**: Use `-o` flag to skip 18-second optimization
 - ✅ **MediaPipe** (Recommended): More accurate (95%), better performance (~15 FPS), works in varied conditions
-- ✅ **CV Mode** (Educational): Learn traditional computer vision (~1 FPS), highly customizable
+- ✅ **CV Mode** (Educational): Learn traditional computer vision (~1 FPS), now with intelligent auto-calibration
 
 ### Performance Comparison
 
@@ -138,10 +186,17 @@ python tools/debug_detection.py
 
 ## 🔧 Troubleshooting
 
-**Hand not detected?**
-- Ensure good lighting
-- Try switching detection modes
-- Use `python tools/skin_tuner.py` for CV mode calibration
+**Hand not detected in CV mode?**
+- Run fresh calibration: `python main.py cv` (without `-s` flag)
+- Ensure good lighting during calibration
+- Try manual tuning: `python tools/skin_tuner.py`
+- Use debug mode to see detection issues: `python main.py cv -d`
+
+**Calibration issues?**
+- Keep hand in frame for full 10-second color sampling
+- Move hand slowly during calibration for better color coverage
+- If optimization fails (0% detection), use `-o` flag to skip it
+- Check that MediaPipe detects your hand during preview
 
 **Jittery cursor?**
 - Keep hand steady

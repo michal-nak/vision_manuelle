@@ -1,0 +1,29 @@
+{
+  "detector": "cv",
+  "timestamp": "2025-12-07T14:48:34.399943",
+  "overall_accuracy": 0.0,
+  "total_samples": 2,
+  "total_correct": 0,
+  "per_finger_results": {
+    "0": {
+      "samples": 1,
+      "correct": 0,
+      "detected_counts": [
+        2
+      ],
+      "errors": [
+        2
+      ]
+    },
+    "1": {
+      "samples": 1,
+      "correct": 0,
+      "detected_counts": [
+        3
+      ],
+      "errors": [
+        3
+      ]
+    }
+  }
+}

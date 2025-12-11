@@ -1,0 +1,71 @@
+{
+  "detector": "mediapipe",
+  "timestamp": "2025-12-11T10:41:37.711232",
+  "overall_accuracy": 0.0,
+  "total_samples": 19,
+  "total_correct": 0,
+  "per_finger_results": {
+    "0": {
+      "samples": 3,
+      "correct": 0,
+      "detected_counts": [
+        1,
+        1,
+        1
+      ],
+      "errors": [
+        1,
+        1,
+        1
+      ]
+    },
+    "1": {
+      "samples": 9,
+      "correct": 0,
+      "detected_counts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "errors": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    "2": {
+      "samples": 7,
+      "correct": 0,
+      "detected_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "errors": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    }
+  }
+}

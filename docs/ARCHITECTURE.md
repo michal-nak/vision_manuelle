@@ -27,8 +27,17 @@ vision_manuelle/
 │       ├── canvas_controller.py      # Canvas drawing logic
 │       └── gesture_handler.py        # Gesture action mapping
 ├── tools/                 # Standalone debugging and tuning tools
-│   ├── skin_tuner.py                 # Interactive skin detection tuner
-│   └── debug_detection.py            # Pipeline visualization tool
+│   ├── calibration/       # Modular calibration system
+│   │   ├── __init__.py               # Package initialization
+│   │   ├── auto_calibrate.py         # Automatic color calibration
+│   │   ├── auto_optimize.py          # Parameter optimization with MediaPipe validation
+│   │   ├── manual_tune.py            # Interactive manual tuning
+│   │   ├── performance_tune.py       # Performance-focused parameter adjustment
+│   │   ├── config_io.py              # Configuration save/load utilities
+│   │   └── ui_display.py             # Calibration UI components
+│   ├── skin_tuner.py                 # Legacy: Interactive skin detection tuner
+│   ├── debug_detection.py            # Pipeline visualization tool
+│   └── cv_calibrate_with_mediapipe.py  # MediaPipe-based calibration tool
 ├── docs/                  # Documentation
 ├── legacy/                # Deprecated code (for reference)
 ├── main.py                # Application entry point
@@ -57,7 +66,14 @@ vision_manuelle/
 - **Dual color space detection**: YCrCb (illumination invariance) + HSV (hue wrapping)
 - **Contour analysis**: Convex hull and convexity defects for finger counting
 - **Hybrid tracking**: Switches between detection and optical flow
-- **Configurable**: JSON-based color range tuning
+- **Configurable**: JSON-based color range and processing parameter tuning
+- **Modular architecture**: Separated into specialized components:
+  - `cv_detector.py`: Main detector class and orchestration
+  - `detection_pipeline.py`: Complete detection pipeline with configurable parameters
+  - `skin_detection.py`: Dual color space skin masking
+  - `config_loader.py`: Configuration loading and validation
+  - `detector_state.py`: State management for tracking mode
+- **Auto-calibration**: MediaPipe-based intelligent calibration with IoU validation
 
 ### 2. UI Layer
 
@@ -96,12 +112,62 @@ vision_manuelle/
 - `FPSCounter`: Frame rate calculation and monitoring
 - Multi-platform support (Windows/Linux/macOS)
 
+### 4. Calibration System
+
+**Modular Architecture** (`tools/calibration/`)
+- Each calibration mode in separate module for maintainability
+- Shared utilities in `config_io.py` and `ui_display.py`
+- Clean separation of concerns: UI, logic, I/O
+
+**Auto-Calibration Flow**:
+1. **Color Calibration** (`auto_calibrate.py`):
+   - MediaPipe detects hand automatically
+   - Samples YCrCb/HSV values from full hand region
+   - Uses 10th-90th percentile for robust color bounds
+   - 10-second duration for adequate sampling
+
+2. **Auto-Optimization** (`auto_optimize.py`):
+   - Tests 6 parameter presets (Fast, Balanced, Quality, etc.)
+   - Uses MediaPipe as ground truth (palm center mode)
+   - Calculates IoU (Intersection over Union) for spatial validation
+   - Visual feedback: Blue (MediaPipe) vs Green (CV) detections
+   - Selects best preset based on F1 score
+   - 18-second duration (3 seconds per preset)
+
+3. **Configuration Management** (`config_io.py`):
+   - Loads/saves JSON configuration
+   - Validates parameter ranges
+   - Provides sensible defaults
+   - Timestamp tracking
+
+**Manual Tuning** (`manual_tune.py`):
+- Real-time trackbar adjustments
+- 21 parameters: color thresholds, morphology, background subtraction
+- HSV wrap-around visualization support
+- Live preview with dual-mode display
+
+**Performance Tuning** (`performance_tune.py`):
+- Optimize for speed vs accuracy tradeoff
+- Test parameter impact on FPS
+- Preset management
+
+**MediaPipe Integration**:
+- Context-aware positioning: `use_palm_center` parameter
+- **Calibration mode**: Palm center for spatial alignment with CV detector
+- **Drawing mode**: Thumb tip for precise cursor control
+- Prevents spatial mismatch during validation
+
 ## Data Flow
 
 ```
 Camera → Detector → Result Dict → UI → Canvas
                 ↓
            Debug Overlay
+
+# Calibration Flow
+Camera → MediaPipe (palm center) → Hand Region → Color Sampling → Config
+                ↓
+         Auto-Optimize → Test Presets → IoU Validation → Best Config
 ```
 
 ### Result Dictionary Format
@@ -112,12 +178,23 @@ All detectors return a standardized dictionary:
 {
     'detected': bool,           # Whether hand was detected
     'hand_x': float,            # X position (0.0-1.0, normalized)
+                               # MediaPipe: Thumb tip (default) or palm center (calibration mode)
+                               # CV: Hand centroid (center of contour)
     'hand_y': float,            # Y position (0.0-1.0, normalized)
-    'hand_center': tuple,       # (x, y) in normalized coords (CV only)
+    'hand_center': tuple,       # (x, y) in normalized coords (CV only, deprecated)
     'finger_count': int,        # Number of extended fingers
     'gesture': str,             # Gesture name
     'annotated_frame': ndarray  # Frame with overlays drawn
 }
+```
+
+**MediaPipe Context-Aware Positioning**:
+```python
+# Drawing mode (default)
+detector.process_frame(frame)  # Returns thumb tip position
+
+# Calibration mode (for CV alignment)
+detector.process_frame(frame, use_palm_center=True)  # Returns palm center
 ```
 
 ## Design Patterns
@@ -223,19 +300,74 @@ All detectors return a standardized dictionary:
   "ycrcb_lower": [Y_min, Cr_min, Cb_min],
   "ycrcb_upper": [Y_max, Cr_max, Cb_max],
   "hsv_lower": [H_min, S_min, V_min],
-  "hsv_upper": [H_max, S_max, V_max]
+  "hsv_upper": [H_max, S_max, V_max],
+  "processing_params": {
+    "denoise_h": 10,              # Non-local means denoising strength
+    "kernel_small": 3,            # Small morphology kernel size
+    "kernel_large": 7,            # Large morphology kernel size
+    "morph_iterations": 2,        # Morphological operation iterations
+    "min_contour_area": 3000,     # Minimum hand area (pixels)
+    "max_contour_area": 50000     # Maximum hand area (pixels)
+  },
+  "preset_name": "Balanced",      # Name of optimization preset used
+  "timestamp": "2025-12-05 10:30:45"
 }
 ```
 
 - Auto-loaded by detectors and tools
-- Saved by tuning tools with timestamps
+- Saved by calibration system with timestamps
 - Supports HSV hue wrap-around (e.g., 170-10 for red tones)
+- Processing parameters set by auto-optimization
+- Validated ranges prevent invalid configurations
+
+## Command-Line Interface
+
+### Main Application (`main.py`)
+
+**Syntax**:
+```bash
+python main.py [mode] [flags]
+```
+
+**Modes**:
+- `mediapipe` (default): MediaPipe hand tracking
+- `cv`: Computer vision detector
+
+**Flags**:
+- `--skip-calibration`, `-s`: Use saved config, skip calibration (CV only)
+- `--skip-optimization`, `-o`: Skip auto-optimization, color only (CV only)
+- `--debug`, `-d`: Enable debug overlay
+
+**Examples**:
+```bash
+python main.py                 # MediaPipe mode
+python main.py cv              # Full CV calibration (28s)
+python main.py cv -o           # Quick calibration (10s)
+python main.py cv -s           # Skip calibration (instant)
+python main.py cv -d           # Enable debug overlay
+python main.py cv -od          # Quick calibration + debug
+```
+
+**Calibration Flow Logic**:
+```python
+if mode == 'cv':
+    if skip_calibration:
+        load_config()
+    else:
+        color_calibrate()  # 10 seconds
+        if not skip_optimization:
+            auto_optimize()  # 18 seconds
+        save_config()
+```
 
 ## Future Improvements
 
-- Multi-hand support
-- Gesture learning mode
-- 3D drawing space
-- Remote collaboration
-- Recording and playback
+- Multi-hand support (multiple users simultaneously)
+- Gesture learning mode (custom gesture definitions)
+- 3D drawing space (depth perception)
+- Remote collaboration (network drawing)
+- Recording and playback (gesture sequences)
 - Custom gesture definitions via config
+- Adaptive IoU thresholds based on hand size
+- Incremental calibration (update existing config)
+- Lighting condition detection and auto-adjustment

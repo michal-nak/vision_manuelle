@@ -4,40 +4,10 @@ Focus on adjusting color ranges to match your skin tone
 """
 import cv2
 import numpy as np
-import sys
-import json
-from pathlib import Path
-from datetime import datetime
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.detectors import CVDetector
-from src.core.utils import find_camera
+from debug_utils import init_camera, save_color_config, load_color_config
 
 def nothing(x):
     pass
-
-def load_config(config_path):
-    """Load color ranges from JSON config file"""
-    if config_path.exists():
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-            return config
-    return None
-
-def save_config(config_path, ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper):
-    """Save color ranges to JSON config file"""
-    config = {
-        "timestamp": datetime.now().isoformat(),
-        "ycrcb_lower": ycrcb_lower.tolist(),
-        "ycrcb_upper": ycrcb_upper.tolist(),
-        "hsv_lower": hsv_lower.tolist(),
-        "hsv_upper": hsv_upper.tolist(),
-        "description": "Skin detection color ranges for CV detector"
-    }
-    with open(config_path, 'w') as f:
-        json.dump(config, f, indent=2)
-    print(f"\n✅ Configuration saved to {config_path}")
 
 def main():
     print("=" * 70)
@@ -52,19 +22,14 @@ def main():
     print("  - Press 'q' to quit")
     print("=" * 70)
     
-    cap = find_camera()
+    from src.detectors import CVDetector
+    
+    cap = init_camera()
     if not cap:
-        print("Could not open camera")
         return
     
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    
-    # Load config from JSON
-    config_path = Path(__file__).parent.parent / 'skin_detection_config.json'
-    config = load_config(config_path)
-    
     detector = CVDetector()
+    config = load_color_config()
     
     # Use config values if available
     if config:
@@ -72,7 +37,7 @@ def main():
         detector.ycrcb_upper = np.array(config['ycrcb_upper'], dtype=np.uint8)
         detector.hsv_lower = np.array(config['hsv_lower'], dtype=np.uint8)
         detector.hsv_upper = np.array(config['hsv_upper'], dtype=np.uint8)
-        print(f"✅ Loaded configuration from {config_path}")
+        print(f"✅ Loaded saved configuration")
     else:
         print(f"⚠️  No config found, using default values")
     
@@ -230,7 +195,7 @@ def main():
         if key == ord('q'):
             break
         elif key == ord('s'):
-            save_config(config_path, ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper)
+            save_color_config(ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper)
             print("\n" + "=" * 70)
             print("✅ CURRENT OPTIMIZED VALUES:")
             print("=" * 70)

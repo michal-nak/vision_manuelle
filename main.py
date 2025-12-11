@@ -12,7 +12,7 @@ import tkinter as tk
 import numpy as np
 import time
 
-def mediapipe_based_calibration():
+def mediapipe_based_calibration(skip_optimization=False):
     """Use MediaPipe to detect hand and calibrate CV detector from those regions"""
     print("\n" + "=" * 70)
     print("MEDIAPIPE-BASED CALIBRATION (10 seconds)")
@@ -39,7 +39,8 @@ def mediapipe_based_calibration():
         if not ret:
             break
         
-        mp_result = mp_detector.process_frame(frame.copy())
+        # Use palm center during calibration for alignment with CV detector
+        mp_result = mp_detector.process_frame(frame.copy(), use_palm_center=True)
         
         cv2.putText(mp_result['annotated_frame'], "Move hand around slowly", (20, 50), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2)
@@ -72,8 +73,8 @@ def mediapipe_based_calibration():
         
         remaining = duration - (time.time() - start_time)
         
-        # Process with MediaPipe
-        mp_result = mp_detector.process_frame(frame.copy())
+        # Process with MediaPipe (use palm center for alignment with CV detector)
+        mp_result = mp_detector.process_frame(frame.copy(), use_palm_center=True)
         
         # Progress bar
         progress = int(((duration - remaining) / duration) * 600)
@@ -91,20 +92,9 @@ def mediapipe_based_calibration():
         if mp_result['detected']:
             h, w = frame.shape[:2]
             
-            # Get palm center from MediaPipe landmarks (not thumb tip)
-            # Palm center is average of wrist (0) and middle finger base (9)
-            if hasattr(mp_detector, 'last_landmarks') and mp_detector.last_landmarks:
-                landmarks = mp_detector.last_landmarks
-                wrist = landmarks.landmark[0]
-                middle_mcp = landmarks.landmark[9]  # Middle finger base
-                
-                # Calculate palm center (between wrist and middle finger base)
-                center_x = (wrist.x + middle_mcp.x) / 2
-                center_y = (wrist.y + middle_mcp.y) / 2
-            else:
-                # Fallback: use thumb tip from result
-                center_x = mp_result['hand_x']
-                center_y = mp_result['hand_y']
+            # Use palm center from detector (already calculated with use_palm_center=True)
+            center_x = mp_result['hand_x']
+            center_y = mp_result['hand_y']
             
             # Filter out detections in top 30% of frame (likely face)
             if center_y < 0.3:  # Skip if in top 30% (face region)
@@ -190,7 +180,28 @@ def mediapipe_based_calibration():
     print(f"HSV: {hsv_lower} - {hsv_upper}")
     print("=" * 70)
     
-    # Run auto-optimization to find best processing parameters
+    # Run auto-optimization to find best processing parameters (unless skipped)
+    if skip_optimization:
+        print("\n" + "=" * 70)
+        print("AUTO-OPTIMIZATION SKIPPED")
+        print("=" * 70)
+        print("Using color calibration only with default processing parameters")
+        print("=" * 70)
+        
+        cap.release()
+        
+        # Apply color calibration to CV detector
+        CVDetector.ycrcb_lower = ycrcb_lower
+        CVDetector.ycrcb_upper = ycrcb_upper
+        CVDetector.hsv_lower = hsv_lower
+        CVDetector.hsv_upper = hsv_upper
+        
+        # Save color calibration only
+        from tools.calibration.config_io import save_calibration
+        save_calibration(base_calibration)
+        
+        return True
+    
     print("\nRunning auto-optimization to find best processing parameters...")
     print("This will test different parameter combinations for 18 seconds.")
     print("MediaPipe will be used as ground truth for detection quality.")
@@ -227,13 +238,15 @@ def main():
     # Get detection mode from command line or default to mediapipe
     detection_mode = sys.argv[1] if len(sys.argv) > 1 else "mediapipe"
     skip_calibration = "--skip-calibration" in sys.argv or "-s" in sys.argv
+    skip_optimization = "--skip-optimization" in sys.argv or "-o" in sys.argv
     debug_mode = "--debug" in sys.argv or "-d" in sys.argv
     
     if detection_mode not in ["mediapipe", "cv"]:
-        print("Usage: python main.py [mediapipe|cv] [--skip-calibration|-s] [--debug|-d]")
+        print("Usage: python main.py [mediapipe|cv] [--skip-calibration|-s] [--skip-optimization|-o] [--debug|-d]")
         print("  mediapipe: Use MediaPipe hand detection")
         print("  cv: Use CV-based hand detection")
         print("  --skip-calibration, -s: Skip calibration and use saved config (cv mode only)")
+        print("  --skip-optimization, -o: Skip auto-optimization after color calibration (cv mode only)")
         print("  --debug, -d: Show debug overlay with masks and detection info")
         detection_mode = "mediapipe"
     
@@ -251,7 +264,7 @@ def main():
                 print("⚠️  No saved config found! Consider running calibration.")
             print("=" * 70)
         else:
-            calibrated = mediapipe_based_calibration()
+            calibrated = mediapipe_based_calibration(skip_optimization=skip_optimization)
             if not calibrated:
                 print("\nProceeding with saved calibration values...")
             else:

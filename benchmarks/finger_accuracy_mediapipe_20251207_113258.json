@@ -1,0 +1,111 @@
+{
+  "detector": "mediapipe",
+  "timestamp": "2025-12-07T11:32:58.813815",
+  "overall_accuracy": 100.0,
+  "total_samples": 60,
+  "total_correct": 60,
+  "per_finger_results": {
+    "0": {
+      "samples": 10,
+      "correct": 10,
+      "detected_counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "errors": []
+    },
+    "1": {
+      "samples": 10,
+      "correct": 10,
+      "detected_counts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "errors": []
+    },
+    "2": {
+      "samples": 10,
+      "correct": 10,
+      "detected_counts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "errors": []
+    },
+    "3": {
+      "samples": 10,
+      "correct": 10,
+      "detected_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "errors": []
+    },
+    "4": {
+      "samples": 10,
+      "correct": 10,
+      "detected_counts": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "errors": []
+    },
+    "5": {
+      "samples": 10,
+      "correct": 10,
+      "detected_counts": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "errors": []
+    }
+  }
+}

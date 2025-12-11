@@ -1,23 +1,29 @@
 {
-  "timestamp": "2025-12-04T22:52:11.218399",
+  "timestamp": "2025-12-05T11:14:43.543877",
   "ycrcb_lower": [
-    0,
-    133,
-    77
+    96,
+    139,
+    118
   ],
   "ycrcb_upper": [
-    255,
-    173,
-    127
+    152,
+    148,
+    125
   ],
   "hsv_lower": [
-    128,
-    0,
-    0
+    1,
+    37,
+    119
   ],
   "hsv_upper": [
-    33,
-    66,
-    255
-  ]
+    177,
+    83,
+    175
+  ],
+  "denoise_h": 7,
+  "kernel_small": 3,
+  "kernel_large": 9,
+  "morph_iterations": 1,
+  "min_contour_area": 3500,
+  "max_contour_area": 45000
 }

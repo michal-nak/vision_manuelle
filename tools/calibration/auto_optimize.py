@@ -137,23 +137,44 @@ def auto_optimize(cap, base_calibration=None, use_mediapipe_validation=False):
             result = detector.process_frame(frame.copy())
             cv_detected = result['detected']
             
+            # Create visualization frame
+            h, w = frame.shape[:2]
+            vis_frame = result['annotated_frame'].copy()
+            
             # Get ground truth from MediaPipe if enabled
             if use_mediapipe_validation and mp_detector:
-                mp_result = mp_detector.process_frame(frame.copy())
+                # Use palm center for proper alignment with CV detector during optimization
+                mp_result = mp_detector.process_frame(frame.copy(), use_palm_center=True)
                 mp_detected = mp_result['detected']
+                
+                # Draw MediaPipe detection in blue
+                if mp_detected:
+                    mp_x, mp_y = mp_result['hand_x'], mp_result['hand_y']
+                    mp_x_px = int(mp_x * w)
+                    mp_y_px = int(mp_y * h)
+                    cv2.circle(vis_frame, (mp_x_px, mp_y_px), 15, (255, 0, 0), 3)  # Blue for MediaPipe
+                    cv2.putText(vis_frame, "MP", (mp_x_px + 20, mp_y_px), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+                
+                # Draw CV detection in green
+                if cv_detected:
+                    cv_x, cv_y = result['hand_x'], result['hand_y']
+                    cv_x_px = int(cv_x * w)
+                    cv_y_px = int(cv_y * h)
+                    cv2.circle(vis_frame, (cv_x_px, cv_y_px), 15, (0, 255, 0), 3)  # Green for CV
+                    cv2.putText(vis_frame, "CV", (cv_x_px + 20, cv_y_px + 30), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
                 
                 # Compare detections using spatial overlap
                 if cv_detected and mp_detected:
                     # Calculate IoU (Intersection over Union) between bounding boxes
-                    h, w = frame.shape[:2]
-                    
                     # CV detector bounding box
                     cv_x, cv_y = result['hand_x'], result['hand_y']
                     cv_bbox_size = 100  # Approximate hand size
-                    cv_x1 = max(0, int(cv_x - cv_bbox_size/2))
-                    cv_y1 = max(0, int(cv_y - cv_bbox_size/2))
-                    cv_x2 = min(w, int(cv_x + cv_bbox_size/2))
-                    cv_y2 = min(h, int(cv_y + cv_bbox_size/2))
+                    cv_x1 = max(0, int(cv_x * w - cv_bbox_size/2))
+                    cv_y1 = max(0, int(cv_y * h - cv_bbox_size/2))
+                    cv_x2 = min(w, int(cv_x * w + cv_bbox_size/2))
+                    cv_y2 = min(h, int(cv_y * h + cv_bbox_size/2))
                     
                     # MediaPipe bounding box (normalized coordinates)
                     mp_x, mp_y = mp_result['hand_x'], mp_result['hand_y']
@@ -164,6 +185,10 @@ def auto_optimize(cap, base_calibration=None, use_mediapipe_validation=False):
                     mp_y1 = max(0, mp_y_px - mp_bbox_size//2)
                     mp_x2 = min(w, mp_x_px + mp_bbox_size//2)
                     mp_y2 = min(h, mp_y_px + mp_bbox_size//2)
+                    
+                    # Draw bounding boxes
+                    cv2.rectangle(vis_frame, (cv_x1, cv_y1), (cv_x2, cv_y2), (0, 255, 0), 2)  # CV in green
+                    cv2.rectangle(vis_frame, (mp_x1, mp_y1), (mp_x2, mp_y2), (255, 0, 0), 2)  # MP in blue
                     
                     # Calculate intersection
                     inter_x1 = max(cv_x1, mp_x1)
@@ -177,6 +202,10 @@ def auto_optimize(cap, base_calibration=None, use_mediapipe_validation=False):
                     union = cv_area + mp_area - intersection
                     
                     iou = intersection / union if union > 0 else 0
+                    
+                    # Draw IoU on frame
+                    cv2.putText(vis_frame, f"IoU: {iou:.2f}", (10, h - 10), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                     
                     # Consider it a match if IoU > 0.3 (30% overlap)
                     if iou > 0.3:
@@ -203,7 +232,17 @@ def auto_optimize(cap, base_calibration=None, use_mediapipe_validation=False):
             if frame_time > 0:
                 fps_samples.append(1.0 / frame_time)
             
-            cv2.imshow('Optimizing', result['annotated_frame'])
+            # Add status overlay
+            elapsed = time.time() - start_time
+            remaining = 3.0 - elapsed
+            cv2.putText(vis_frame, f"Testing: {config['name']}", (10, 30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
+            cv2.putText(vis_frame, f"Time: {remaining:.1f}s", (10, 60), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(vis_frame, f"Detections: CV={correct_detections} FP={false_positives} FN={false_negatives}", 
+                       (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            
+            cv2.imshow('Optimizing', vis_frame)
             cv2.waitKey(1)
         
         avg_fps = np.mean(fps_samples) if fps_samples else 0

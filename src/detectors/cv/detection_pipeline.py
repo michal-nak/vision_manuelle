@@ -4,7 +4,10 @@ Contains the core detection logic separated from the main class
 """
 import cv2
 from ...core.config import MIN_HAND_AREA, MAX_HAND_AREA
-from .skin_detection import detect_skin_ycrcb_hsv, apply_morphological_operations, find_largest_contour
+from .skin_detection import (detect_skin_ycrcb_hsv, apply_morphological_operations, 
+                              find_largest_contour, filter_forearm_by_shape, 
+                              filter_forearm_by_orientation, select_hand_contour_intelligent,
+                              detect_wrist_and_crop, apply_top_priority_filter)
 from .finger_detection import count_fingers_from_contour, smooth_finger_count, map_fingers_to_gesture, draw_finger_visualization
 from .visualization import draw_debug_overlay, draw_extended_debug_metrics
 
@@ -61,18 +64,46 @@ def detect_hand_full_pipeline(frame, gray, bg_subtractor, state, color_bounds, s
     h, w = frame.shape[:2]
     max_area_pixels = int(w * h * MAX_HAND_AREA)
     
-    # Find hand contour
-    hand_contour = find_largest_contour(mask, processing_params['min_contour_area'], processing_params['max_contour_area'])
+    # Find all contours (not just largest - need to filter forearms)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-    if hand_contour is None:
-        # Debug: show why no contour found
+    if not contours:
+        return None, mask
+    
+    # Filter contours by area first
+    valid_contours = [c for c in contours 
+                     if processing_params['min_contour_area'] < cv2.contourArea(c) < processing_params['max_contour_area']]
+    
+    if not valid_contours:
         if show_debug:
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contours:
                 largest = max(contours, key=cv2.contourArea)
                 area = cv2.contourArea(largest)
                 state.debug_metrics['largest_contour_area'] = area
+                state.debug_metrics['contour_rejected'] = 'Area filter'
         return None, mask
+    
+    # Use intelligent selection to filter out forearms
+    hand_contour = select_hand_contour_intelligent(valid_contours, frame.shape)
+    
+    if hand_contour is None:
+        if show_debug:
+            state.debug_metrics['contour_rejected'] = 'Forearm filter'
+        return None, mask
+    
+    # Additional geometric validation
+    if not filter_forearm_by_shape(hand_contour, h):
+        if show_debug:
+            state.debug_metrics['contour_rejected'] = 'Shape validation'
+        return None, mask
+    
+    if not filter_forearm_by_orientation(hand_contour):
+        if show_debug:
+            state.debug_metrics['contour_rejected'] = 'Orientation filter'
+        return None, mask
+    
+    # Try to detect wrist and crop forearm
+    hand_contour = detect_wrist_and_crop(mask, hand_contour)
     
     return hand_contour, mask
 
@@ -106,8 +137,8 @@ def process_detected_hand(frame, gray, contour, state, show_debug):
     else:
         return None
     
-    # Count fingers
-    finger_count = count_fingers_from_contour(contour)
+    # Count fingers with debug info
+    finger_count, debug_info = count_fingers_from_contour(contour, return_debug=True)
     state.finger_history.append(finger_count)
     smooth_count = smooth_finger_count(state.finger_history)
     
@@ -146,7 +177,9 @@ def process_detected_hand(frame, gray, contour, state, show_debug):
         'hand_y': hand_center[1],
         'finger_count': smooth_count,
         'gesture': gesture,
-        'annotated_frame': annotated
+        'annotated_frame': annotated,
+        'contour': contour,
+        'debug_info': debug_info
     }
 
 

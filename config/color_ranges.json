@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-12-07T15:12:22.974524",
+  "ycrcb_lower": [
+    80,
+    139,
+    115
+  ],
+  "ycrcb_upper": [
+    152,
+    148,
+    122
+  ],
+  "hsv_lower": [
+    0,
+    37,
+    104
+  ],
+  "hsv_upper": [
+    79,
+    104,
+    174
+  ],
+  "description": "Widened by 10.0% from previous ranges"
+}

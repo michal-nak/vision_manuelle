@@ -7,16 +7,39 @@
 **Default mode (MediaPipe)**:
 ```bash
 python main.py
+# or explicitly:
+python main.py mediapipe
 ```
 
-**Computer Vision mode**:
+**Computer Vision mode (full calibration)**:
 ```bash
 python main.py cv
+# Runs 10s color calibration + 18s auto-optimization = 28s total
 ```
 
-**Specify detection mode**:
+**CV mode with options**:
 ```bash
-python main.py [mediapipe|cv]
+# Skip calibration entirely (use saved config)
+python main.py cv --skip-calibration
+python main.py cv -s
+
+# Skip auto-optimization (only color calibration)
+python main.py cv --skip-optimization
+python main.py cv -o
+
+# Enable debug overlay
+python main.py cv --debug
+python main.py cv -d
+
+# Combine flags
+python main.py cv -od   # Color calibration + debug
+python main.py cv -s    # Skip all calibration
+python main.py cv -sod  # Skip calibration, enable debug, skip optimization
+```
+
+**Full usage**:
+```bash
+python main.py [mediapipe|cv] [--skip-calibration|-s] [--skip-optimization|-o] [--debug|-d]
 ```
 
 ## Detection Modes
@@ -48,14 +71,46 @@ python main.py [mediapipe|cv]
 
 **Advantages**:
 - No neural network dependencies
+- **Intelligent auto-calibration** using MediaPipe as ground truth
 - Customizable skin detection via calibration tools
 - Educational value (understand traditional CV algorithms)
-- Faster startup time
+- Fast startup with saved config (`-s` flag)
 
 **Limitations**:
 - Lower performance (~1 FPS due to Python processing overhead)
 - Lower accuracy (~85% after calibration)
 - **Best for learning and research, not production use**
+
+### CV Auto-Calibration System
+
+**How it works**:
+
+1. **Color Calibration (10 seconds)**:
+   - MediaPipe detects your hand automatically
+   - System samples YCrCb and HSV values from full hand region (not just palm)
+   - Uses 10th-90th percentile for robust color bounds (excludes outliers)
+   - Samples from entire hand bounding box for better finger detection
+   - **Visual feedback**: Orange circle shows palm center being tracked
+
+2. **Auto-Optimization (18 seconds)** (optional with `-o` flag):
+   - Tests 6 parameter presets: Fast, Balanced, Quality, Ultra-Fast, Fast+Quality, Smooth
+   - Each preset tested for 3 seconds with live hand detection
+   - **MediaPipe as ground truth**: Uses palm center for spatial comparison
+   - **IoU validation**: Requires 30% overlap between CV and MediaPipe bounding boxes
+   - **Visual feedback**: Blue circle = MediaPipe detection, Green circle = CV detection
+   - Selects preset with best F1 score (harmonic mean of precision/recall)
+
+3. **Configuration Saved**:
+   - Results saved to `skin_detection_config.json`
+   - Use `-s` flag to skip calibration on future runs
+   - Config includes: color bounds (YCrCb, HSV) + processing params (kernel sizes, iterations, area thresholds)
+
+**Why palm center alignment?**
+- CV detector uses hand centroid (center of contour)
+- MediaPipe normally returns thumb tip (for drawing)
+- During calibration: MediaPipe switches to palm center mode for accurate comparison
+- After calibration: MediaPipe returns to thumb tip for drawing
+- **Result**: Proper spatial alignment fixes 0% detection issue in optimization
 
 **Gestures**:
 - **1 Finger**: Draw with current color
@@ -66,9 +121,31 @@ python main.py [mediapipe|cv]
 - **0 Fingers**: Idle (no action)
 
 **Tips**:
-- Ensure good lighting on your hand
+- **First run**: Do full calibration once (`python main.py cv`)
+- **Subsequent runs**: Use saved config (`python main.py cv -s`)
+- **Quick testing**: Skip optimization (`python main.py cv -o`)
+- **Debugging**: Enable debug overlay (`python main.py cv -d`)
+- Ensure good lighting during calibration
 - Keep hand in front of plain background
-- Use skin tuner tool if detection is poor
+- Move hand slowly during 10s calibration for better color sampling
+- Keep hand in frame during 18s optimization for accurate validation
+
+**Calibration Workflow**:
+```bash
+# First time setup (28 seconds)
+python main.py cv
+# Preview → Color calibration (10s) → Optimization (18s) → Save config → Launch app
+
+# Future sessions (instant)
+python main.py cv -s
+# Load config → Launch app
+
+# Re-calibrate if lighting changes
+python main.py cv  # Overwrites saved config
+
+# Debug detection issues
+python main.py cv -d  # See masks, contours, metrics
+```
 
 ## UI Controls
 
@@ -128,8 +205,10 @@ python main.py [mediapipe|cv]
 | **Frame Rate** | ~15 FPS | ~1 FPS |
 | **Detection Accuracy** | 95% | 85% (after calibration) |
 | **Finger Count Accuracy** | 95% | 80% |
-| **Setup Time** | Instant | 5 seconds (auto-calibration) |
-| **Lighting Sensitivity** | Low | High |
+| **Initial Setup Time** | Instant | 28 seconds (full calibration) |
+| **Subsequent Startup** | Instant | Instant (with `-s` flag) |
+| **Quick Setup** | Instant | 10 seconds (with `-o` flag) |
+| **Lighting Sensitivity** | Low | Medium (after calibration) |
 | **CPU Usage** | Medium (C++) | High (Python) |
 | **Best For** | Production, demos | Education, research |
 
