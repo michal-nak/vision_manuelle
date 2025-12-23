@@ -1,29 +1,29 @@
 {
-  "timestamp": "2025-12-05T11:14:43.543877",
+  "timestamp": "2025-12-17T10:33:21.558381",
   "ycrcb_lower": [
-    96,
-    139,
+    68,
+    136,
     118
   ],
   "ycrcb_upper": [
-    152,
-    148,
+    218,
+    144,
     125
   ],
   "hsv_lower": [
     1,
-    37,
-    119
+    22,
+    90
   ],
   "hsv_upper": [
-    177,
-    83,
-    175
+    9,
+    104,
+    233
   ],
-  "denoise_h": 7,
-  "kernel_small": 3,
+  "denoise_h": 5,
+  "kernel_small": 5,
   "kernel_large": 9,
-  "morph_iterations": 1,
-  "min_contour_area": 3500,
-  "max_contour_area": 45000
+  "morph_iterations": 2,
+  "min_contour_area": 3000,
+  "max_contour_area": 50000
 }

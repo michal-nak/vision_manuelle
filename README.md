@@ -1,4 +1,4 @@
-# Gesture Paint 🎨✋
+# Gesture Paint
 
 Draw and paint using only your hand gestures! Control a full-featured paint application through your webcam without touching your keyboard or mouse.
 
@@ -6,16 +6,16 @@ Draw and paint using only your hand gestures! Control a full-featured paint appl
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-## ✨ Features
+## Features
 
-- 🖐️ **Gesture-Based Drawing**: Draw, erase, change colors, and adjust brush size with hand gestures - completely hands-free!
-- 🎯 **Dual Detection Modes**: Choose between MediaPipe (AI-powered, ~15 FPS) or Computer Vision (traditional, ~1 FPS)
-- ⚡ **Real-Time Performance**: MediaPipe achieves ~15 FPS with optimized C++ implementation
-- 🎨 **Full Paint Features**: Multiple colors, adjustable brush sizes, save/load - all controlled by gestures
-- 🔧 **Debug Mode**: Toggle detailed detection metrics and visualization
-- 🖥️ **Cross-Platform**: Works on Windows, Linux, and macOS
+- **Gesture-Based Drawing**: Draw, erase, change colors, and adjust brush size with hand gestures - completely hands-free!
+- **Dual Detection Modes**: Choose between MediaPipe (AI-powered, ~15 FPS) or Computer Vision (traditional, ~1 FPS)
+- **Real-Time Performance**: MediaPipe achieves ~15 FPS with optimized C++ implementation
+- **Full Paint Features**: Multiple colors, adjustable brush sizes, save/load - all controlled by gestures
+- **Debug Mode**: Toggle detailed detection metrics and visualization
+- **Cross-Platform**: Works on Windows, Linux, and macOS
 
-## 📸 Quick Demo
+## Quick Demo
 
 ### MediaPipe Mode
 - **Draw**: Touch thumb + index finger together
@@ -30,7 +30,7 @@ Draw and paint using only your hand gestures! Control a full-featured paint appl
 - **Increase Size**: Show 4 fingers
 - **Clear Canvas**: Show 5 fingers (all)
 
-## 🚀 Installation
+## Installation
 
 ### Requirements
 - Python 3.10+
@@ -50,7 +50,7 @@ Draw and paint using only your hand gestures! Control a full-featured paint appl
    pip install -r requirements.txt
    ```
 
-## 🎮 Usage
+## Usage
 
 ### Launch the Application
 
@@ -126,7 +126,7 @@ python main.py cv -s   # Skip all calibration
 - **Brush Size Slider**: Alternative to 4-finger gesture (1-50 pixels)
 - **Clear/Save Buttons**: File operations (also available via 5-finger gesture for clear)
 
-## 🛠️ Advanced Features
+## Advanced Features
 
 ### Auto-Calibration System
 
@@ -159,15 +159,15 @@ See all 8 processing steps of the CV detector:
 python tools/debug_detection.py
 ```
 
-## 💡 Tips for Best Results
+## Tips for Best Results
 
-- ✅ Use **good lighting** (avoid backlighting)
-- ✅ Keep **plain background** behind your hand
-- ✅ Position hand **centered in frame**
-- ✅ **First-time CV users**: Run full calibration once, then use `-s` flag for instant startup
-- ✅ **Quick testing**: Use `-o` flag to skip 18-second optimization
-- ✅ **MediaPipe** (Recommended): More accurate (95%), better performance (~15 FPS), works in varied conditions
-- ✅ **CV Mode** (Educational): Learn traditional computer vision (~1 FPS), now with intelligent auto-calibration
+- Use **good lighting** (avoid backlighting)
+- Keep **plain background** behind your hand
+- Position hand **centered in frame**
+- **First-time CV users**: Run full calibration once, then use `-s` flag for instant startup
+- **Quick testing**: Use `-o` flag to skip 18-second optimization
+- **MediaPipe** (Recommended): More accurate (95%), better performance (~15 FPS), works in varied conditions
+- **CV Mode** (Educational): Learn traditional computer vision (~1 FPS), now with intelligent auto-calibration
 
 ### Performance Comparison
 
@@ -176,7 +176,7 @@ python tools/debug_detection.py
 | MediaPipe | ~15 | 95% | Production, demos, general use |
 | CV | ~1 | 85% | Learning CV algorithms, research |
 
-## 📚 Documentation
+## Documentation
 
 - **[Architecture](docs/ARCHITECTURE.md)**: System design and technical details
 - **[Usage Guide](docs/USAGE.md)**: Comprehensive user manual
@@ -184,7 +184,7 @@ python tools/debug_detection.py
 - **[Contributing](docs/CONTRIBUTING.md)**: How to contribute
 - **[Development History](docs/DEVELOPMENT.md)**: Project evolution and technical decisions
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 **Hand not detected in CV mode?**
 - Run fresh calibration: `python main.py cv` (without `-s` flag)
@@ -211,7 +211,7 @@ python tools/debug_detection.py
 
 See [USAGE.md](docs/USAGE.md#troubleshooting) for detailed troubleshooting.
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 vision_manuelle/
@@ -227,7 +227,7 @@ vision_manuelle/
 └── requirements.txt      # Dependencies
 ```
 
-## 🎓 Academic Context
+## Academic Context
 
 This project was developed as part of a computer vision course, demonstrating:
 - Real-time hand detection algorithms
@@ -237,7 +237,7 @@ This project was developed as part of a computer vision course, demonstrating:
 
 See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for technical analysis and project evolution.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
@@ -248,7 +248,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) f
 4. Test thoroughly
 5. Submit a pull request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
 
@@ -259,14 +259,14 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) for deta
 - **François Gerbeau** - Original Detection System
 - **Théo Lahmar** - Testing & Documentation
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **OpenCV** - Computer vision library
 - **MediaPipe** - Hand tracking solution
 - **NumPy** - Numerical computing
 - **Python Community** - Excellent ecosystem
 
-## 📬 Contact
+## Contact
 
 - **Repository**: [github.com/michal-nak/vision_manuelle](https://github.com/michal-nak/vision_manuelle)
 - **Issues**: [Report a bug or request a feature](https://github.com/michal-nak/vision_manuelle/issues)

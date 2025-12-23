@@ -1,22 +1,28 @@
 {
   "ycrcb_lower": [
-    98,
-    138,
-    110
-  ],
-  "ycrcb_upper": [
-    162,
-    146,
-    122
-  ],
-  "hsv_lower": [
-    0,
-    44,
+    68,
+    136,
     118
   ],
+  "ycrcb_upper": [
+    218,
+    144,
+    125
+  ],
+  "hsv_lower": [
+    1,
+    22,
+    90
+  ],
   "hsv_upper": [
-    43,
-    97,
-    183
-  ]
+    9,
+    104,
+    233
+  ],
+  "denoise_h": 5,
+  "kernel_small": 5,
+  "kernel_large": 9,
+  "morph_iterations": 2,
+  "min_contour_area": 3000,
+  "max_contour_area": 50000
 }
