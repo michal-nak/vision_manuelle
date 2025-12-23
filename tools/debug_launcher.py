@@ -12,18 +12,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 def show_menu():
     """Display main menu"""
     print("\n" + "="*70)
-    print("🔧 DEBUG TOOLS LAUNCHER")
+    print("DEBUG TOOLS LAUNCHER")
     print("="*70)
-    print("\n📊 DIAGNOSTIC TOOLS:")
+    print("\nDIAGNOSTIC TOOLS:")
     print("  1. Pipeline Visualizer - See skin mask, morphology, contours")
     print("  2. Skin Color Tuner - Adjust YCrCb/HSV ranges with trackbars")
     print("  3. Full Debug Tool - Complete pipeline with toggles and filters")
     
-    print("\n🎯 BENCHMARK TOOLS:")
+    print("\nBENCHMARK TOOLS:")
     print("  4. Finger Counting Benchmark - CV vs MediaPipe comparison")
     print("  5. Performance Benchmark - FPS and latency comparison")
     
-    print("\n⚙️  CALIBRATION TOOLS:")
+    print("\nCALIBRATION TOOLS:")
     print("  6. MediaPipe Calibration - Auto-calibrate with MediaPipe")
     print("  7. Widen Color Ranges - Expand detection bounds by X%")
     
@@ -46,7 +46,7 @@ def widen_color_ranges():
     try:
         percent = float(input("\nEnter percentage to widen (e.g., 20 for 20%): "))
     except ValueError:
-        print("❌ Invalid input")
+        print("Invalid input")
         return
     
     factor = percent / 100.0
@@ -67,7 +67,7 @@ def widen_color_ranges():
     
     confirm = input("\nSave these ranges? (y/n): ")
     if confirm.lower() != 'y':
-        print("❌ Cancelled")
+        print("Cancelled")
         return
     
     save_color_config(new_ycrcb_lower, new_ycrcb_upper, new_hsv_lower, new_hsv_upper,
@@ -84,7 +84,7 @@ def run_pipeline_visualizer():
     import cv2
     import numpy as np
     
-    print("\n🔍 PIPELINE VISUALIZER - Press 'q' to quit\n")
+    print("\nPIPELINE VISUALIZER - Press 'q' to quit\n")
     
     cap = init_camera()
     if not cap:
@@ -149,7 +149,7 @@ def main():
         choice = input("\nSelect tool (0-7): ").strip()
         
         if choice == '0':
-            print("\n👋 Goodbye!")
+            print("\nGoodbye!")
             break
         elif choice == '1':
             run_pipeline_visualizer()
@@ -171,7 +171,7 @@ def main():
         elif choice == '7':
             widen_color_ranges()
         else:
-            print("❌ Invalid choice")
+            print("Invalid choice")
 
 
 if __name__ == '__main__':

@@ -23,7 +23,7 @@ def load_skin_detection_config():
             
             return ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper
         except Exception as e:
-            print(f"⚠️  Failed to load skin detection config: {e}")
+            print(f"Failed to load skin detection config: {e}")
     
     # Fall back to defaults from config.py
     ycrcb_lower = np.array(YCRCB_LOWER, dtype=np.uint8)
@@ -63,6 +63,6 @@ def load_processing_params():
                 'max_contour_area': config.get('max_contour_area', defaults['max_contour_area'])
             }
         except Exception as e:
-            print(f"⚠️  Failed to load processing params: {e}")
+            print(f"Failed to load processing params: {e}")
     
     return defaults

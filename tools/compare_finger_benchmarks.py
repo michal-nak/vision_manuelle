@@ -76,11 +76,11 @@ def compare_benchmarks(baseline_file, improved_file):
     print(f"Change:      {improvement:+.1f}% ({improvement_pct:+.1f}%)")
     
     if improvement > 0:
-        print("✅ IMPROVEMENT")
+        print("IMPROVEMENT")
     elif improvement < 0:
-        print("❌ REGRESSION")
+        print("REGRESSION")
     else:
-        print("⚠️  NO CHANGE")
+        print("NO CHANGE")
     
     # Per-finger comparison
     print("\n--- PER-FINGER ACCURACY COMPARISON ---")
@@ -95,7 +95,7 @@ def compare_benchmarks(baseline_file, improved_file):
         improved_acc = improved_data['accuracy']
         change = improved_acc - baseline_acc
         
-        status = "✅" if change > 5 else ("❌" if change < -5 else "→")
+        status = "ok" if change > 5 else ("Bad" if change < -5 else "→")
         
         print(f"{finger:<10} {baseline_acc:>6.1f}%{'':<5} {improved_acc:>6.1f}%{'':<5} {change:>+6.1f}%{'':<5} {status}")
     
@@ -139,10 +139,10 @@ def main():
     files = sorted(benchmarks_dir.glob('finger_accuracy_cv_*.json'))
     
     if len(files) < 2:
-        print(f"❌ Need at least 2 benchmark files to compare. Found {len(files)}")
+        print(f"Need at least 2 benchmark files to compare. Found {len(files)}")
         return
     
-    print(f"\n📊 Found {len(files)} benchmark files:")
+    print(f"\nFound {len(files)} benchmark files:")
     for i, f in enumerate(files):
         print(f"  {i+1}. {f.name}")
     
@@ -150,7 +150,7 @@ def main():
     baseline = files[-2]
     improved = files[-1]
     
-    print(f"\n🔍 Comparing:")
+    print(f"\nComparing:")
     print(f"  Baseline: {baseline.name}")
     print(f"  Improved: {improved.name}")
     

@@ -347,26 +347,26 @@ def main():
                 history=500, varThreshold=16, detectShadows=False
             )
             detector.state.frame_count = 0
-            print("✅ Background subtractor reset")
+            print("Background subtractor reset")
         elif key == ord('d'):
             use_denoising = not use_denoising
-            print(f"✅ Denoising: {'ON' if use_denoising else 'OFF'}")
+            print(f"Denoising: {'ON' if use_denoising else 'OFF'}")
         elif key == ord('b'):
             use_bg_subtraction = not use_bg_subtraction
-            print(f"✅ Background subtraction: {'ON' if use_bg_subtraction else 'OFF'}")
+            print(f"Background subtraction: {'ON' if use_bg_subtraction else 'OFF'}")
         elif key == ord('t'):
             if not show_trackbars:
                 show_trackbars = create_trackbars()
-                print("✅ Trackbar window opened - adjust sliders to tune detection")
+                print("Trackbar window opened - adjust sliders to tune detection")
             else:
                 cv2.destroyWindow('Color Range Adjustment')
                 show_trackbars = False
-                print("✅ Trackbar window closed")
+                print("Trackbar window closed")
         elif key == ord('s'):
             save_color_config(detector.ycrcb_lower, detector.ycrcb_upper, 
                             detector.hsv_lower, detector.hsv_upper)
             print("\n" + "=" * 70)
-            print("✅ SAVED TO CONFIG FILE")
+            print("SAVED TO CONFIG FILE")
             print("=" * 70)
             print(f"YCrCb Lower: {detector.ycrcb_lower.tolist()}")
             print(f"YCrCb Upper: {detector.ycrcb_upper.tolist()}")

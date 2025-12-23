@@ -67,7 +67,7 @@ def main():
         save_choice = input("\nSave calibration? (y/n): ").strip().lower()
         if save_choice == 'y':
             save_calibration(calibration)
-            print("\n✓ Calibration saved! Run gesture_paint.py to test.")
+            print("\nCalibration saved! Run gesture_paint.py to test.")
 
 
 if __name__ == "__main__":

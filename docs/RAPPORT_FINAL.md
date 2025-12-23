@@ -263,11 +263,11 @@ Comptage Doigts → Reconnaissance Geste → Action
 **Phase 8.5:** Filtrage avant-bras (-85% faux positifs)
 
 #### 4.6 Cas d'Usage Testés
-- ✅ Application de peinture gestuelle (main droite)
-- ✅ Contrôle de souris (mode tracking)
-- ✅ Détection temps réel avec overlay debug
-- ✅ Calibration multi-utilisateurs
-- ✅ Environnements luminosité variable
+- Application de peinture gestuelle (main droite)
+- Contrôle de souris (mode tracking)
+- Détection temps réel avec overlay debug
+- Calibration multi-utilisateurs
+- Environnements luminosité variable
 
 #### 4.7 Défis Rencontrés et Solutions
 

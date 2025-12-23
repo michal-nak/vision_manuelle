@@ -865,9 +865,9 @@ def main():
 |--------|--------|-------|-------------|
 | **Avg File Size** | 766 lines | 106 lines | 86% smaller |
 | **Max File Size** | 900 lines | 285 lines | 68% smaller |
-| **Files > 300 lines** | 3 files | 0 files | ✅ Goal achieved |
-| **Cyclomatic Complexity** | High | Low | ✅ More testable |
-| **Code Duplication** | ~15% | ~3% | ✅ Better reuse |
+| **Files > 300 lines** | 3 files | 0 files | Goal achieved |
+| **Cyclomatic Complexity** | High | Low | More testable |
+| **Code Duplication** | ~15% | ~3% | Better reuse |
 
 **Development Workflow Impact**:
 
@@ -906,11 +906,11 @@ def test_drawing_manager():
 ```
 
 **Backward Compatibility**:
-- ✅ No breaking changes to public APIs
-- ✅ Existing tools still work
-- ✅ Configuration files compatible
-- ✅ User experience unchanged
-- ⚠️ Internal imports updated (transparent to users)
+- No breaking changes to public APIs
+- Existing tools still work
+- Configuration files compatible
+- User experience unchanged
+- Internal imports updated (transparent to users)
 
 **Lessons Learned**:
 
@@ -997,13 +997,13 @@ if not success or good_points < 5:
 **Goal**: Improve finger counting accuracy using classical computer vision methods
 
 **Curriculum Alignment**: All techniques from "vision numérique" course:
-- ✅ **Contour analysis** (segmentation et regroupement)
-- ✅ **Morphological operations** (traitement de base, filtrage non linéaire)
-- ✅ **Distance transform** (morphological operation covered in cours)
-- ✅ **Geometric features** (détection de caractéristiques, appariements)
-- ✅ **Adaptive thresholding** (filtrage, détection d'arêtes)
-- ✅ **Temporal filtering** (signal processing, filtrage linéaire)
-- ❌ **No machine learning** (stays within classical CV scope)
+- **Contour analysis** (segmentation et regroupement)
+- **Morphological operations** (traitement de base, filtrage non linéaire)
+- **Distance transform** (morphological operation covered in cours)
+- **Geometric features** (détection de caractéristiques, appariements)
+- **Adaptive thresholding** (filtrage, détection d'arêtes)
+- **Temporal filtering** (signal processing, filtrage linéaire)
+- **No machine learning** (stays within classical CV scope)
 
 **Problem Analysis**:
 
@@ -1170,15 +1170,15 @@ class FingerCountSmoother:
 | **Stability (variance)** | 1.8 | 0.6 | 67% reduction |
 | **False Detections** | 18% | 7% | 61% reduction |
 | **Rotation Tolerance** | ±20° | ±45° | 2.25× better |
-| **Hand Size Adaptivity** | Fixed | Adaptive | ✅ |
-| **Temporal Consistency** | Poor | Good | ✅ |
+| **Hand Size Adaptivity** | Fixed | Adaptive | ok |
+| **Temporal Consistency** | Poor | Good | ok |
 
 **Qualitative Improvements**:
-- ✅ Finger count remains stable while moving hand
-- ✅ Works with hand rotated at various angles
-- ✅ Less sensitive to lighting variations
-- ✅ Smoother transitions between gesture states
-- ✅ Reduced false triggers during movement
+- Finger count remains stable while moving hand
+- Works with hand rotated at various angles
+- Less sensitive to lighting variations
+- Smoother transitions between gesture states
+- Reduced false triggers during movement
 
 **Code Organization**:
 - `finger_detection.py`: All three methods in one module
@@ -1287,7 +1287,7 @@ cv2.circle(frame, (ix, iy), 10, (255, 0, 255), 2)
 ```python
 # Integrated into main.py
 if detection_mode == "cv":
-    print("\n🎯 Starting auto-calibration...")
+    print("\nStarting auto-calibration...")
     success, config = run_calibration()
     if success:
         # Use calibrated parameters
@@ -1432,14 +1432,14 @@ mediapipe.python.solution_base.SolutionBase: Packet timestamp mismatch
 except Exception as e:
     self.hands = self.mp_hands.Hands(...)  # Full reinit
 ```
-❌ **Problem**: Takes 100-200ms, causes visible stutter
+**Problem**: Takes 100-200ms, causes visible stutter
 
 **Attempt 2**: Ignore error, return empty detection
 ```python
 except Exception:
     return {'hand_detected': False}
 ```
-⚠️ **Problem**: Hand "disappears" for one frame, causes cursor jump
+**Problem**: Hand "disappears" for one frame, causes cursor jump
 
 **Final Solution**: Cache last valid result, return on error
 ```python
@@ -1906,7 +1906,7 @@ hull = cv2.convexHull(contour, returnPoints=False)
 defects = cv2.convexityDefects(contour, hull)
 finger_count = len(defects) + 1
 ```
-❌ **Failed**: Too many false defects from noise
+**Failed**: Too many false defects from noise
 
 **Attempt 2: Defect Depth Threshold (Week 2)**
 ```python
@@ -1916,9 +1916,9 @@ for defect in defects:
     if depth > 5000:  # Threshold
         finger_count += 1
 ```
-⚠️ **Better but**: Depth varies with hand size/distance
+**Better but**: Depth varies with hand size/distance
 
-**Attempt 3: Adaptive Peak Detection (Week 3)** ✅
+**Attempt 3: Adaptive Peak Detection (Week 3)**
 ```python
 # 1. Calculate distance statistics from convex hull
 distances = [cv2.pointPolygonTest(hull, pt, True) for pt in contour]
@@ -2144,7 +2144,7 @@ hull = cv2.convexHull(contour, returnPoints=False)
 defects = cv2.convexityDefects(contour, hull)
 finger_count = len(defects) + 1  # Defects + 1 = fingers
 ```
-❌ **Problems**: False positives, noise sensitive
+**Problems**: False positives, noise sensitive
 
 **Final (Week 7)**:
 ```python
@@ -2192,7 +2192,7 @@ def count_fingers_from_contour(contour, frame, defect_threshold=0.2):
     
     return finger_count
 ```
-✅ **Improvements**: Robust to noise, adaptive threshold, valley validation
+**Improvements**: Robust to noise, adaptive threshold, valley validation
 
 ### Example 2: Tracking System
 
@@ -2201,7 +2201,7 @@ def count_fingers_from_contour(contour, frame, defect_threshold=0.2):
 # Full detection every frame
 result = self._detect_hand(frame, gray)
 ```
-❌ **Problems**: Slow, computationally expensive
+**Problems**: Slow, computationally expensive
 
 **Final (Week 7)**:
 ```python
@@ -2234,7 +2234,7 @@ return result
 self.hand_x = result['hand_x']
 self.hand_y = result['hand_y']
 ```
-❌ **Problems**: Jittery, hard to draw precisely
+**Problems**: Jittery, hard to draw precisely
 
 **Final (Week 6)**:
 ```python
@@ -2249,7 +2249,7 @@ else:
 self.prev_hand_x = self.hand_x
 self.prev_hand_y = self.hand_y
 ```
-✅ **Improvements**: Smooth movement, responsive, no lag
+**Improvements**: Smooth movement, responsive, no lag
 
 ## Troubleshooting Guide: Evolution & Solutions
 
@@ -2264,11 +2264,11 @@ This section documents common issues encountered during development, why they oc
 **Week 1-2 (Initial Problem)**:
 - **Cause**: Fixed HSV thresholds didn't work for all skin tones
 - **Attempted Fix 1**: Widened HSV ranges
-  - ❌ Result: More false positives (wooden furniture detected as hands)
+  - Result: More false positives (wooden furniture detected as hands)
 - **Attempted Fix 2**: Added YCrCb color space
-  - ⚠️ Result: Better but still required per-user tuning
+  - Result: Better but still required per-user tuning
 - **Final Solution (Week 3)**: Auto-calibration
-  - ✅ Result: Works for 95% of users out-of-box
+  - Result: Works for 95% of users out-of-box
 
 **Week 4 (Lighting Variation)**:
 - **Cause**: Auto-calibration works for current lighting, fails when lights change
@@ -2430,18 +2430,18 @@ MediaPipe (~15 FPS) significantly outperforms CV mode (~1 FPS) because:
 ```python
 finger_count = len(convexity_defects) + 1
 ```
-- ❌ Accuracy: ~60%
+- Accuracy: ~60%
 - **Problem**: Noise on hand edge creates false defects
 
 **Week 2: Defect Depth Threshold**
 ```python
 finger_count = len([d for d in defects if d[3] > 5000]) + 1
 ```
-- ⚠️ Accuracy: ~70%
+- Accuracy: ~70%
 - **Problem**: Threshold (5000) is arbitrary, doesn't scale with hand size
 
 **Week 3: Adaptive Peak Detection**
-- ✅ Accuracy: ~80% (CV), ~95% (MediaPipe)
+- Accuracy: ~80% (CV), ~95% (MediaPipe)
 - **Key Insight**: Use statistics (mean, std) instead of fixed thresholds
 - **Improvement**: Adapts to different hand sizes and distances
 
@@ -2479,7 +2479,7 @@ Timestamps can arrive out of order or duplicate.
 except Exception as e:
     self.hands = self.mp_hands.Hands(...)  # Reinitialize
 ```
-- ❌ Result: Works but slow (100ms to reinitialize)
+- Result: Works but slow (100ms to reinitialize)
 
 **Attempt 2**: Cache last result, return on error
 ```python
@@ -2489,7 +2489,7 @@ try:
 except Exception as e:
     return self.last_result  # Return previous frame
 ```
-- ✅ Result: Seamless recovery, user doesn't notice
+- Result: Seamless recovery, user doesn't notice
 - **Trade-off**: One frame delay when error occurs (imperceptible at 30 FPS)
 
 **Why This Works**:
@@ -2607,25 +2607,27 @@ This section explains recommended practices and WHY they work, backed by empiric
 ### Detection Mode Selection
 
 **When to Use MediaPipe Mode**:
-✅ **Recommended for**:
+
+**Recommended for**:
 - First-time users (plug-and-play experience)
 - Varied lighting conditions (indoor/outdoor, day/night)
 - When both accuracy AND speed are important
 - Closed fist tracking (MediaPipe handles this well)
 - All production use cases (best overall performance)
 
-❌ **Not recommended for**:
+**Not recommended for**:
 - Offline/embedded systems (requires model download)
 - Educational contexts where algorithm understanding is the goal
 
 **When to Use CV Mode**:
-✅ **Recommended for**:
+
+**Recommended for**:
 - Learning computer vision (see algorithm internals)
 - Understanding traditional CV pipeline steps
 - Educational/academic purposes (algorithm experimentation)
 - Research contexts where customization is needed
 
-❌ **Not recommended for**:
+**Not recommended for**:
 - Production applications (MediaPipe is faster and more accurate)
 - Quick demos (slow performance + setup time)
 - Performance-critical applications (limited to ~1 FPS)

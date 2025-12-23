@@ -64,7 +64,7 @@ def analyze_finger_benchmark(cv_file, mp_file):
             print(f"  {i} fingers: {cv_distribution[i]:>4} ({pct:>5.1f}%) {bar}")
         
         most_common = max(cv_distribution.items(), key=lambda x: x[1])
-        print(f"\n❌ BIAS: CV detects {most_common[0]} fingers {most_common[1]/total*100:.1f}% of the time")
+        print(f"\nBIAS: CV detects {most_common[0]} fingers {most_common[1]/total*100:.1f}% of the time")
     
     # Problem 2: False negatives for specific counts
     print("\n--- WORST PERFORMERS ---")
@@ -95,7 +95,7 @@ def analyze_finger_benchmark(cv_file, mp_file):
             mp_std = np.std(mp_counts)
             
             if cv_std > 0.5:
-                print(f"{finger} fingers: CV std={cv_std:.2f}, MP std={mp_std:.2f} - ❌ CV unstable")
+                print(f"{finger} fingers: CV std={cv_std:.2f}, MP std={mp_std:.2f} -  CV unstable")
     
     print("\n" + "="*80)
     print("RECOMMENDATIONS:")
@@ -103,7 +103,7 @@ def analyze_finger_benchmark(cv_file, mp_file):
     
     # Analyze bias
     if most_common[0] in [0, 1] and most_common[1]/total > 0.5:
-        print("\n1. ❌ CRITICAL: Strong bias toward detecting 0-1 fingers")
+        print("\n1. CRITICAL: Strong bias toward detecting 0-1 fingers")
         print("   Problem: Convexity defects not finding enough valleys")
         print("   Solutions:")
         print("   - Check if defects array is empty most of the time")
@@ -115,7 +115,7 @@ def analyze_finger_benchmark(cv_file, mp_file):
     if '0' in cv_data['per_finger_results']:
         zero_finger_data = cv_data['per_finger_results']['0']
         if zero_finger_data['samples'] > 0 and zero_finger_data['correct'] / zero_finger_data['samples'] < 0.3:
-            print("\n2. ❌ Cannot detect closed fist (0 fingers)")
+            print("\n2.  Cannot detect closed fist (0 fingers)")
             print("   Problem: Detecting 1 finger instead of 0")
             print("   Solution: Check palm area vs convexity hull ratio")
             print("   - If ratio > 0.95, likely a closed fist")
@@ -131,7 +131,7 @@ def analyze_finger_benchmark(cv_file, mp_file):
                 high_finger_accuracies.append(acc)
     
     if high_finger_accuracies and np.mean(high_finger_accuracies) < 0.2:
-        print("\n3. ❌ Cannot detect 3-5 fingers (open hand)")
+        print("\n3.  Cannot detect 3-5 fingers (open hand)")
         print("   Problem: Open hand detected as 1-2 fingers")
         print("   Solutions:")
         print("   - Check if extrema points method is finding multiple fingertips")
@@ -147,7 +147,7 @@ def main():
     mp_files = sorted(benchmarks_dir.glob('finger_accuracy_mediapipe_*.json'))
     
     if not cv_files or not mp_files:
-        print("❌ No benchmark files found")
+        print(" No benchmark files found")
         return
     
     # Use latest

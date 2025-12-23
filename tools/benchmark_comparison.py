@@ -167,7 +167,7 @@ def run_mediapipe_calibration():
     with open(config_path, 'w') as f:
         json.dump(config, f, indent=2)
     
-    print(f"\n✅ Calibration complete! Config saved to {config_path}")
+    print(f"\nCalibration complete! Config saved to {config_path}")
     print(f"   Collected {len(ycrcb_samples)} samples from {hand_regions_collected} hand regions")
     
     cap.release()
@@ -591,14 +591,14 @@ def main():
         calibration_success = run_mediapipe_calibration()
         
         if not calibration_success:
-            print("\n⚠️  Calibration was not completed")
+            print("\nCalibration was not completed")
             print("The benchmark will use existing config (if available)")
             response = input("Continue with benchmark anyway? (y/n): ").strip().lower()
             if response != 'y':
                 print("Benchmark aborted")
                 return
     else:
-        print("\n⚠️  Calibration skipped (using existing config)")
+        print("\nCalibration skipped (using existing config)")
     
     # Run benchmark
     print("\n" + "=" * 70)

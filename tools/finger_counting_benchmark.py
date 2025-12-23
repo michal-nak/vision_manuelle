@@ -61,7 +61,7 @@ class FingerCountingBenchmark:
             own_cap = True
             
         if not cap.isOpened():
-            print("❌ Error: Cannot open camera")
+            print("Error: Cannot open camera")
             return
         
         # Test sequence: 0, 1, 2, 3, 4, 5 fingers
@@ -80,7 +80,7 @@ class FingerCountingBenchmark:
         print("="*80)
         
         for expected_fingers in test_sequence:
-            print(f"\n📋 GET READY: Show {expected_fingers} finger(s)")
+            print(f"\nGET READY: Show {expected_fingers} finger(s)")
             print("   Press any key when ready...")
             
             # Wait for user to get ready
@@ -105,7 +105,7 @@ class FingerCountingBenchmark:
                     break
             
             # Start collecting samples
-            print(f"▶️  RECORDING {expected_fingers} finger(s)...")
+            print(f"RECORDING {expected_fingers} finger(s)...")
             start_time = cv2.getTickCount()
             cv_samples = 0
             mp_samples = 0
@@ -247,7 +247,7 @@ class FingerCountingBenchmark:
                     cv2.destroyAllWindows()
                     return
                 elif key == ord('q'):  # Skip this pose
-                    print(f"   ⏭️  Skipped after CV:{cv_samples} MP:{mp_samples} samples")
+                    print(f"  Skipped after CV:{cv_samples} MP:{mp_samples} samples")
                     break
                 
                 # Check if duration elapsed
@@ -258,7 +258,7 @@ class FingerCountingBenchmark:
         if own_cap:
             cap.release()
         cv2.destroyAllWindows()
-        print("\n✅ Test sequence complete!")
+        print("\nTest sequence complete!")
     
     def generate_report(self):
         """Generate detailed accuracy report for both detectors"""
@@ -394,7 +394,7 @@ class FingerCountingBenchmark:
             with open(filepath, 'w') as f:
                 json.dump(report, f, indent=2)
             
-            print(f"💾 {detector_name.upper()} results saved to: {filepath}")
+            print(f"{detector_name.upper()} results saved to: {filepath}")
             saved_files.append(filepath)
         
         return saved_files
@@ -503,7 +503,7 @@ def run_mediapipe_calibration(cap):
     cv2.destroyAllWindows()
     
     if len(ycrcb_samples) < 5:
-        print("❌ Not enough hand regions collected")
+        print("Not enough hand regions collected")
         return None, None
     
     # Calculate bounds using shared function (percentile-based with wrap-around support)
@@ -516,7 +516,7 @@ def run_mediapipe_calibration(cap):
         ycrcb_samples, hsv_samples, margin_factor=0.15
     )
     
-    print(f"✅ Calibration complete! Collected {hand_regions_collected} regions")
+    print(f"Calibration complete! Collected {hand_regions_collected} regions")
     print(f"YCrCb: {ycrcb_lower.tolist()} - {ycrcb_upper.tolist()}")
     print(f"HSV:   {hsv_lower.tolist()} - {hsv_upper.tolist()}")
     
@@ -528,25 +528,25 @@ def run_mediapipe_calibration(cap):
 
 
 def main():
-    print("\n🎯 FINGER COUNTING BENCHMARK - CV vs MediaPipe")
+    print("\nFINGER COUNTING BENCHMARK - CV vs MediaPipe")
     print("Both detectors process the SAME frames for fair comparison.")
     
     # Open camera
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("❌ Error: Cannot open camera")
+        print("Error: Cannot open camera")
         return
     
     # Run calibration first
-    print("\n📋 Step 1: Calibration")
+    print("\nStep 1: Calibration")
     cv_detector, mp_detector = run_mediapipe_calibration(cap)
     
     if cv_detector is None or mp_detector is None:
-        print("❌ Calibration failed or skipped")
+        print("Calibration failed or skipped")
         cap.release()
         return
     
-    print("\n📋 Step 2: Benchmark Test")
+    print("\nStep 2: Benchmark Test")
     print("\nSelect test duration per pose:")
     print("  1. Quick test (3 seconds per pose = ~18s total)")
     print("  2. Standard test (5 seconds per pose = ~30s total)")
@@ -557,7 +557,7 @@ def main():
     duration = duration_map.get(duration_choice, 5)
     
     # Run benchmark with calibrated detectors (reuse same camera)
-    print("\n📊 Running parallel comparison...")
+    print("\nRunning parallel comparison...")
     benchmark = FingerCountingBenchmark(cv_detector, mp_detector)
     benchmark.run_test_sequence(duration_per_pose=duration, cap=cap)
     saved_files = benchmark.save_results()

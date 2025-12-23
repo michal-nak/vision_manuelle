@@ -37,9 +37,9 @@ def main():
         detector.ycrcb_upper = np.array(config['ycrcb_upper'], dtype=np.uint8)
         detector.hsv_lower = np.array(config['hsv_lower'], dtype=np.uint8)
         detector.hsv_upper = np.array(config['hsv_upper'], dtype=np.uint8)
-        print(f"✅ Loaded saved configuration")
+        print(f"Loaded saved configuration")
     else:
-        print(f"⚠️  No config found, using default values")
+        print(f"No config found, using default values")
     
     # Create main display window (resizable) - size based on 2 camera views side by side
     # Camera is 640x480, so 2 side by side with half size each = 640x480 total per row, 3 rows
@@ -67,7 +67,7 @@ def main():
     cv2.createTrackbar('V Min', 'Adjust Values', detector.hsv_lower[2], 255, nothing)
     cv2.createTrackbar('V Max', 'Adjust Values', detector.hsv_upper[2], 255, nothing)
     
-    print("\n✅ Trackbar window created. Show your hand and adjust sliders!")
+    print("\nTrackbar window created. Show your hand and adjust sliders!")
     
     while True:
         ret, frame = cap.read()
@@ -197,7 +197,7 @@ def main():
         elif key == ord('s'):
             save_color_config(ycrcb_lower, ycrcb_upper, hsv_lower, hsv_upper)
             print("\n" + "=" * 70)
-            print("✅ CURRENT OPTIMIZED VALUES:")
+            print("CURRENT OPTIMIZED VALUES:")
             print("=" * 70)
             print(f"YCRCB_LOWER = {ycrcb_lower.tolist()}")
             print(f"YCRCB_UPPER = {ycrcb_upper.tolist()}")

@@ -222,7 +222,7 @@ class BenchmarkAnalyzer:
         print("=" * 80)
         
         if not self.issues:
-            print("✅ No critical issues detected!")
+            print("No critical issues detected!")
         else:
             for i, issue in enumerate(self.issues, 1):
                 print(f"\n{i}. [{issue['severity']}] {issue['description']}")
@@ -272,43 +272,43 @@ class ImprovementApplier:
         if handler:
             return handler(recommendation)
         else:
-            print(f"⚠️  No handler for action: {action}")
+            print(f"No handler for action: {action}")
             return False
     
     def _apply_relax_area(self, rec):
         """Increase MAX_HAND_AREA"""
         # This would modify config.py
-        print(f"✅ Would apply: {rec['implementation']}")
+        print(f"Would apply: {rec['implementation']}")
         self.applied_changes.append(rec)
         return True
     
     def _apply_reduce_min_area(self, rec):
         """Decrease MIN_HAND_AREA"""
-        print(f"✅ Would apply: {rec['implementation']}")
+        print(f" Would apply: {rec['implementation']}")
         self.applied_changes.append(rec)
         return True
     
     def _apply_disable_denoising(self, rec):
         """Disable denoising step"""
-        print(f"✅ Would apply: {rec['implementation']}")
+        print(f"Would apply: {rec['implementation']}")
         self.applied_changes.append(rec)
         return True
     
     def _apply_reduce_morphology(self, rec):
         """Reduce morphology iterations"""
-        print(f"✅ Would apply: {rec['implementation']}")
+        print(f"Would apply: {rec['implementation']}")
         self.applied_changes.append(rec)
         return True
     
     def _apply_increase_smoothing(self, rec):
         """Increase temporal smoothing"""
-        print(f"✅ Would apply: {rec['implementation']}")
+        print(f"Would apply: {rec['implementation']}")
         self.applied_changes.append(rec)
         return True
     
     def _apply_optimize_calibration(self, rec):
         """Optimize calibration parameters"""
-        print(f"✅ Would apply: {rec['implementation']}")
+        print(f"Would apply: {rec['implementation']}")
         self.applied_changes.append(rec)
         return True
 
@@ -330,16 +330,16 @@ def main():
         json_files = list(benchmarks_dir.glob('benchmark_results_*.json'))
         
         if not json_files:
-            print("❌ No benchmark files found in benchmarks/")
+            print("No benchmark files found in benchmarks/")
             print("Run: python tools/benchmark_comparison.py")
             return
         
         benchmark_file = max(json_files, key=lambda p: p.stat().st_mtime)
-        print(f"📊 Using latest benchmark: {benchmark_file.name}\n")
+        print(f"Using latest benchmark: {benchmark_file.name}\n")
     else:
         benchmark_file = Path(args.benchmark_file)
         if not benchmark_file.exists():
-            print(f"❌ File not found: {benchmark_file}")
+            print(f"File not found: {benchmark_file}")
             return
     
     # Analyze
@@ -377,12 +377,12 @@ def main():
             return
         
         if to_apply:
-            print(f"\n📝 Applying {len(to_apply)} improvements...")
+            print(f"\nApplying {len(to_apply)} improvements...")
             for rec in to_apply:
                 applier.apply_recommendation(rec)
             
-            print(f"\n✅ {len(applier.applied_changes)} changes applied!")
-            print("⚠️  Note: This is a dry-run. Implement changes manually or extend the applier.")
+            print(f"\n{len(applier.applied_changes)} changes applied!")
+            print("Note: This is a dry-run. Implement changes manually or extend the applier.")
         else:
             print("No improvements selected.")
 

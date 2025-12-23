@@ -373,4 +373,4 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 Your contributions make this project better for everyone. Whether you're fixing a typo or implementing a major feature, every contribution is valued.
 
-Happy coding! 🎨✋
+Happy coding!
